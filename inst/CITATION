@@ -1,0 +1,15 @@
+
+     year <- sub(".*(2[[:digit:]]{3})-.*", "\\1", meta$Date, perl = TRUE)
+     vers <- paste("R package version", meta$Version)
+     
+     citEntry(entry = "Manual",
+              title = "fdrci: Permutation-based FDR Point and Confidence Interval Estimation",
+              author = personList(as.person("Joshua Millstein")),
+              year = year,
+              note = vers,
+     
+              textVersion =
+              paste0("Joshua Millstein (",
+                     year,
+                     "). fdrci: Permutation-based FDR Point and Confidence Interval Estimation. ",
+                     vers, "."))
