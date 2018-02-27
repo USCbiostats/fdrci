@@ -3,8 +3,9 @@ Type: Package
 Title: Permutation-Based FDR Point and Confidence Interval Estimation
 Version: 2.2
 Date: 2018-2-21
-Author: Joshua Millstein
-Maintainer: Joshua Millstein <joshua.millstein@usc.edu>
+Authors@R: person(
+  "Joshua", "Millstein", email = "joshua.millstein@usc.edu",
+  role = c("aut", "cre"))
 Encoding: UTF-8
 Imports: ggplot2, stats
 Description: FDR functions for permutation-based estimators, including pi0 as well as FDR
@@ -13,4 +14,4 @@ Description: FDR functions for permutation-based estimators, including pi0 as we
              from the permuted data.
 License: Artistic-2.0
 LazyLoad: yes
-RoxygenNote: 6.0.1
+RoxygenNote: 6.0.1.9000
