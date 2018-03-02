@@ -25,8 +25,8 @@
 #' ss = 100
 #' nvar = 100
 #' X = as.data.frame(matrix(rnorm(ss*nvar),nrow=ss,ncol=nvar))
-#' Y = as.data.frame(matrix(rnorm(ss*nvar),nrow=ss,ncol=nvar))
-#' nperm = 10
+#' e = as.data.frame(matrix(rnorm(ss*nvar),nrow=ss,ncol=nvar))
+#' Y = .1*X + e#' nperm = 10
 #' 
 #' myanalysis = function(X,Y){
 #' 	ntests = ncol(X)
