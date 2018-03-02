@@ -31,10 +31,10 @@
 #' 
 #' # Generate observed results
 #' obs = myanalysis(X,Y)
-#' q.values.BH = BH_q( obs[, "pvalue"] )
+#' q.values.BH = q_BH( obs[, "pvalue"] )
 #' 
 #' @export
-BH_q <-
+BH_q<-
 function(pvals){            
 	m = length(pvals)
 	po = pvals[order(pvals)]

@@ -24,6 +24,10 @@
 #' upperbound on a -log10(p-value) scale. Default is 0.1.
 #' @param cl confidence level (default is .95).
 #' @param c1 overdispersion parameter. If this parameter is not specified
+#' @param correct logical, should confidence intervals be corrected for 
+#' multiplicity using the Benjamini and Yekutieli (2005) approach for selected
+#' parameters? If TRUE, confidence intervals will be corrected according to
+#' the selections specified by lowerbound, upperbound, and incr.
 #' (default initial value is NA), then the parameter is estimated from the
 #' data. If all tests are known to be independent, then this parameter should
 #' be set to 1.
@@ -41,6 +45,11 @@
 #' @references Millstein J, Volfson D. 2013. Computationally efficient
 #' permutation-based confidence interval estimation for tail-area FDR.
 #' Frontiers in Genetics | Statistical Genetics and Methodology 4(179):1-11.
+#'
+#' Benjamini, Yoav, and Daniel Yekutieli. "False discovery rate?adjusted multiple 
+#' confidence intervals for selected parameters." Journal of the American Statistical 
+#' Association 100.469 (2005): 71-81.
+#' 
 #' @keywords htest nonparametric
 #' @examples
 #' 
@@ -79,7 +88,7 @@
 #' 
 #' @export
 fdrTbl <-
-function(obs_vec,perm_list,pname,ntests,lowerbound,upperbound,incr=.1,cl=.95,c1=NA){
+function(obs_vec,perm_list,pname,ntests,lowerbound,upperbound,incr=.1,cl=.95,c1=NA,correct=FALSE){
 	# obs_vec is a vector of observed p-values
 	# lowerbound and upperbound define -log10(p-value) range over which fdr is computed for a sequence of thresholds
 	# If obs_vec and perm_list have high p-values filtered out, then lowerbound should be >= filtering threshold on -log10(p-value) scale 
@@ -97,5 +106,50 @@ function(obs_vec,perm_list,pname,ntests,lowerbound,upperbound,incr=.1,cl=.95,c1=
 	   if(length(tmp) == length(plotdat) - 1) plotdat[i,-1] = tmp
 	}
 	
+	if(correct){
+		aa = !is.na(plotdat$fdr)
+		bb = !is.na(plotdat$ll)
+		cc = !is.na(plotdat$ul)
+		indx = which( aa & bb & cc )
+		if( length(indx) > 1 ){
+			tmpt = plotdat[ indx, c("fdr","ll","ul")]
+			alpha = 1 - cl
+			fdr_se = (log(tmpt$fdr) -  log(tmpt$ll)) / qnorm(1-alpha/2)
+			z = abs( log(tmpt$fdr) / fdr_se )
+			p = 2*pnorm(z, lower.tail=FALSE)
+			o = order(p)
+			alpha_a = o * alpha / length(p)
+			sig = p <= alpha_a
+			max_i = max(o[sig])
+			alpha_a[ sig ] = max_i * alpha / length(p)
+			ll_a = exp( log(tmpt$fdr) - qnorm(1-alpha_a/2)*fdr_se )
+			ul_a = exp( log(tmpt$fdr) + qnorm(1-alpha_a/2)*fdr_se )
+			plotdat[ indx, "ll"] = ifelse( ll_a <= 1, ll_a, 1 )
+			plotdat[ indx, "ul"] = ifelse( ul_a <= 1, ul_a, 1 )
+		} # end if length indx
+	} # end correct
+	
 	return(plotdat)
 } # End fdrTbl
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
