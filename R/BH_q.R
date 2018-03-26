@@ -31,7 +31,7 @@
 #' 
 #' # Generate observed results
 #' obs = myanalysis(X,Y)
-#' q.values.BH = q_BH( obs[, "pvalue"] )
+#' q.values.BH = BH_q( obs[, "pvalue"] )
 #' 
 #' @export
 BH_q<-
