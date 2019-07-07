@@ -71,7 +71,7 @@ function(plotdat,lowerbound,upperbound,ymax=1, annot="",xpos=.8, ypos=.8){
 		ggplot2::scale_y_continuous(limits = c(0, ymax)) +
 		ggplot2::theme_bw(base_size = 16) + 
 		ggplot2::geom_line(aes(y = fdr), color="aquamarine4", size=1.5) +
-		ggplot2::xlab(expression(paste('significance threshold (-',log[10],'(p-value))'))) +
+		ggplot2::xlab(expression(paste('detection threshold (-',log[10],'(p-value))'))) +
 		ggplot2::ylab("FDR") + 
 		ggplot2::labs(title="") +
 		ggplot2::theme(plot.margin=unit(c(0,20,10,10),"pt")) +
