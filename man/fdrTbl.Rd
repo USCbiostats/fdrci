@@ -4,8 +4,8 @@
 \alias{fdrTbl}
 \title{FDR Estimate and Confidence Interval Sequence Table}
 \usage{
-fdrTbl(obs_vec, perm_list, pname, ntests, lowerbound, upperbound, incr = 0.1,
-  cl = 0.95, c1 = NA)
+fdrTbl(obs_vec, perm_list, pname, ntests, lowerbound, upperbound,
+  incr = 0.1, cl = 0.95, c1 = NA, correct = FALSE)
 }
 \arguments{
 \item{obs_vec}{observed vector of p-values.}
@@ -34,7 +34,12 @@ upperbound on a -log10(p-value) scale. Default is 0.1.}
 
 \item{cl}{confidence level (default is .95).}
 
-\item{c1}{overdispersion parameter. If this parameter is not specified
+\item{c1}{overdispersion parameter. If this parameter is not specified}
+
+\item{correct}{logical, should confidence intervals be corrected for 
+multiplicity using the Benjamini and Yekutieli (2005) approach for selected
+parameters? If TRUE, confidence intervals will be corrected according to
+the selections specified by lowerbound, upperbound, and incr.
 (default initial value is NA), then the parameter is estimated from the
 data. If all tests are known to be independent, then this parameter should
 be set to 1.}
@@ -64,7 +69,8 @@ fdrTbl calls fdr_od. Output from fdrTbl() can be used for FDRplot() input.
 nrow_=100
 ncol_=100
 X = as.data.frame(matrix(rnorm(nrow_*ncol_),nrow=nrow_,ncol=ncol_))
-Y = as.data.frame(matrix(rnorm(nrow_*ncol_),nrow=nrow_,ncol=ncol_))
+e = as.data.frame(matrix(rnorm(ss*nvar),nrow=ss,ncol=nvar))
+Y = .1*X + e
 nperm = 10
 
 myanalysis = function(X,Y){
@@ -98,6 +104,10 @@ fdrTbl(obs$pvalue,perml,"pvalue",ncol_,1,2)
 Millstein J, Volfson D. 2013. Computationally efficient
 permutation-based confidence interval estimation for tail-area FDR.
 Frontiers in Genetics | Statistical Genetics and Methodology 4(179):1-11.
+
+Benjamini, Yoav, and Daniel Yekutieli. "False discovery rate?adjusted multiple 
+confidence intervals for selected parameters." Journal of the American Statistical 
+Association 100.469 (2005): 71-81.
 }
 \author{
 Joshua Millstein
