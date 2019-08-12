@@ -57,7 +57,7 @@
 #' nrow_=100
 #' ncol_=100
 #' X = as.data.frame(matrix(rnorm(nrow_*ncol_),nrow=nrow_,ncol=ncol_))
-#' e = as.data.frame(matrix(rnorm(ss*nvar),nrow=ss,ncol=nvar))
+#' e = as.data.frame(matrix(rnorm(nrow_*ncol_),nrow=nrow_,ncol=ncol_))
 #' Y = .1*X + e
 #' nperm = 10
 #' 
@@ -87,6 +87,7 @@
 #' ## FDR results table
 #' fdrTbl(obs$pvalue,perml,"pvalue",ncol_,1,2)
 #' 
+#' @importFrom stats pnorm
 #' @export
 fdrTbl <-
 function(obs_vec,perm_list,pname,ntests,lowerbound,upperbound,incr=.1,cl=.95,c1=NA,correct=FALSE){
