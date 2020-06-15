@@ -118,7 +118,7 @@ function(obs_vec,perm_list,pname,ntests,lowerbound,upperbound,incr=.1,cl=.95,c1=
 			fdr_se = (log(tmpt$fdr) -  log(tmpt$ll)) / qnorm(1-alpha/2)
 			z = abs( log(tmpt$fdr) / fdr_se )
 			p = 2*pnorm(z, lower.tail=FALSE)
-			o = order(p)
+			o = rank(p)
 			alpha_a = o * alpha / length(p)
 			sig = p <= alpha_a
 			max_i = max(o[sig])
