@@ -3,7 +3,8 @@
 #' Computes FDR estimates and confidence intervals for a sequence of potential
 #' significance thresholds.
 #' 
-#' fdrTbl calls fdr_od. Output from fdrTbl() can be used for FDRplot() input.
+#' fdrTbl calls fdr_od for a series of discovery thresholds. 
+#' Output from fdrTbl() can be used for FDRplot() input.
 #' 
 #' @param obs_vec observed vector of p-values.
 #' @param perm_list list of dataframes that include a column of permutation
@@ -23,14 +24,18 @@
 #' @param incr value by which to increment the sequence from lowerbound to
 #' upperbound on a -log10(p-value) scale. Default is 0.1.
 #' @param cl confidence level (default is .95).
-#' @param c1 overdispersion parameter. If this parameter is not specified
-#' @param correct logical, should confidence intervals be corrected for 
-#' multiplicity using the Benjamini and Yekutieli (2005) approach for selected
-#' parameters? If TRUE, confidence intervals will be corrected according to
-#' the selections specified by lowerbound, upperbound, and incr.
-#' (default initial value is NA), then the parameter is estimated from the
-#' data. If all tests are known to be independent, then this parameter should
-#' be set to 1.
+#' @param c1 overdispersion parameter to account for dependencies among tests. If 
+#' all tests are known to be independent, then this parameter should be set to 1.
+#' @param correct {"none", "BH"}, should confidence intervals be corrected for 
+#' multiplicity using a modification of the Benjamini and Yekutieli (2005) approach 
+#' for selecting and correcting intervals? (default is "none")
+#' @details If correct = "BH", then confidence intervals will be corrected according to
+#' the thresholds specified by lowerbound, upperbound, and incr. Thresholds will 
+#' be selected if FDR is determined to be significantly different than 1. First
+#' a Z-score test is conducted using the Millstein & Volfson standard error estimate.
+#' Then BH FDR is computed according to the Benjamini and Yekutieli (2005) approach.
+#' CIs for selected thresholds will be adjusted to account for multiple CI estimation.
+#' For thresholds that are not selected, NA values are returned.
 #' @return A dataframe is returned where rows correspond to p-value thresholds
 #' in the sequence from lowerbound to upperbound and columns are:
 #' c("threshold","fdr","ll","ul","pi0","odp","S","Sp") \item{threshold
@@ -46,7 +51,7 @@
 #' permutation-based confidence interval estimation for tail-area FDR.
 #' Frontiers in Genetics | Statistical Genetics and Methodology 4(179):1-11.
 #'
-#' Benjamini, Yoav, and Daniel Yekutieli. "False discovery rate?adjusted multiple 
+#' Benjamini, Yoav, and Daniel Yekutieli. "False discovery rate adjusted multiple 
 #' confidence intervals for selected parameters." Journal of the American Statistical 
 #' Association 100.469 (2005): 71-81.
 #' 
@@ -54,10 +59,10 @@
 #' @examples
 #' 
 #' 
-#' nrow_=100
-#' ncol_=100
-#' X = as.data.frame(matrix(rnorm(nrow_*ncol_),nrow=nrow_,ncol=ncol_))
-#' e = as.data.frame(matrix(rnorm(nrow_*ncol_),nrow=nrow_,ncol=ncol_))
+#' n.row=100
+#' n.col=100
+#' X = as.data.frame(matrix(rnorm(n.row*n.col),nrow=n.row,ncol=n.col))
+#' e = as.data.frame(matrix(rnorm(n.row*n.col),nrow=n.row,ncol=n.col))
 #' Y = .1*X + e
 #' nperm = 10
 #' 
@@ -80,78 +85,62 @@
 #' ## Generate permuted results
 #' perml = vector('list',nperm)
 #' for(p_ in 1:nperm){
-#' 	X1 = X[order(runif(ncol_)),]
+#' 	X1 = X[order(runif(n.col)),]
 #' 	perml[[p_]] = myanalysis(X1,Y)
 #' }
 #' 
 #' ## FDR results table
-#' fdrTbl(obs$pvalue,perml,"pvalue",ncol_,1,2)
+#' fdrTbl(obs$pvalue,perml,"pvalue",n.col,1,2)
+#' fdrTbl(obs$pvalue,perml,"pvalue",n.col,1,2,correct="BH")
 #' 
 #' @importFrom stats pnorm
 #' @export
 fdrTbl <-
-function(obs_vec,perm_list,pname,ntests,lowerbound,upperbound,incr=.1,cl=.95,c1=NA,correct=FALSE){
-	# obs_vec is a vector of observed p-values
+function(obs.vec,perm.list,pname,ntests,lowerbound,upperbound,incr=.1,cl=.95,c1=NA,correct="none"){
+	# obs.vec is a vector of observed p-values
 	# lowerbound and upperbound define -log10(p-value) range over which fdr is computed for a sequence of thresholds
-	# If obs_vec and perm_list have high p-values filtered out, then lowerbound should be >= filtering threshold on -log10(p-value) scale 
-	# perm_list is a list of dataframes, each of which include a column with permutation p-values
+	# If obs.vec and perm.list have high p-values filtered out, then lowerbound should be >= filtering threshold on -log10(p-value) scale 
+	# perm.list is a list of dataframes, each of which include a column with permutation p-values
 	# pname contains a string that is the name of the permutation p-value column
-	# ntests is the number of tests conducted (if no filtering is done, ntests == length(obs_vec)
+	# ntests is the number of tests conducted (if no filtering is done, ntests == length(obs.vec)
 
 	plotdat = as.data.frame(matrix(NA,nrow=0,ncol=8))
 	names(plotdat) = c("threshold","fdr","ll","ul","pi0","odp","S","Sp")
-	thres_ = seq(lowerbound,upperbound,incr)
-	for(i in 1:length(thres_)){
-	   plotdat[i,"threshold"] = thres_[i]
-	   thr = 10^-(thres_[i])
-	   tmp = fdr_od(obs_vec,perm_list,pname,ntests,thr,cl=.95,c1)
+	thres = seq(lowerbound,upperbound,incr)
+	for(i in 1:length(thres)){
+	   plotdat[i,"threshold"] = thres[i]
+	   thr = 10^-(thres[i])
+	   tmp = fdr_od(obs.vec,perm.list,pname,ntests,thr,cl=.95,c1)
 	   if(length(tmp) == length(plotdat) - 1) plotdat[i,-1] = tmp
 	}
 	
-	if(correct){
+	if(is.element(correct, "BH")){
 		aa = !is.na(plotdat$fdr)
 		bb = !is.na(plotdat$ll)
 		cc = !is.na(plotdat$ul)
 		indx = which( aa & bb & cc )
-		if( length(indx) > 1 ){
-			tmpt = plotdat[ indx, c("fdr","ll","ul")]
-			alpha = 1 - cl
-			fdr_se = (log(tmpt$fdr) -  log(tmpt$ll)) / qnorm(1-alpha/2)
-			z = abs( log(tmpt$fdr) / fdr_se )
-			p = 2*pnorm(z, lower.tail=FALSE)
-			o = rank(p)
-			alpha_a = o * alpha / length(p)
-			sig = p <= alpha_a
-			max_i = max(o[sig])
-			alpha_a[ sig ] = max_i * alpha / length(p)
-			ll_a = exp( log(tmpt$fdr) - qnorm(1-alpha_a/2)*fdr_se )
-			ul_a = exp( log(tmpt$fdr) + qnorm(1-alpha_a/2)*fdr_se )
-			plotdat[ indx, "ll"] = ifelse( ll_a <= 1, ll_a, 1 )
-			plotdat[ indx, "ul"] = ifelse( ul_a <= 1, ul_a, 1 )
+		plotdat[!is.element(1:nrow(plotdat),indx), "ll"] = NA
+    plotdat[!is.element(1:nrow(plotdat),indx), "ul"] = NA
+    if (length(indx) > 1) {
+      tmpt = plotdat[indx, c("fdr", "ll", "ul")]
+      alpha = 1 - cl
+      se.fdr = (log(tmpt$fdr) - log(tmpt$ll))/qnorm(1 - alpha/2)
+      z = log(tmpt$fdr)/se.fdr
+      p = pnorm(z, lower.tail = TRUE)
+      qval = p.adjust(p, method="BH")
+      sig = qval <= alpha
+      R = sum(sig)
+      alpha_a = R * alpha/length(p)        
+      ll.a = exp(log(tmpt$fdr) - qnorm(1 - alpha.a/2) * se.fdr)
+      ul.a = exp(log(tmpt$fdr) + qnorm(1 - alpha.a/2) * se.fdr)
+      ll.a = ifelse(sig, ll.a, NA)
+      ul.a = ifelse(sig, ul.a, NA)
+      plotdat[indx, "ll"] = ifelse(ll.a <= 1, ll.a, 1)
+      plotdat[indx, "ul"] = ifelse(ul.a <= 1, ul.a, 1)
 		} # end if length indx
 	} # end correct
 	
 	return(plotdat)
 } # End fdrTbl
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
