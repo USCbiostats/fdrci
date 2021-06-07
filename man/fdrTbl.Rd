@@ -4,16 +4,20 @@
 \alias{fdrTbl}
 \title{FDR Estimate and Confidence Interval Sequence Table}
 \usage{
-fdrTbl(obs_vec, perm_list, pname, ntests, lowerbound, upperbound,
-  incr = 0.1, cl = 0.95, c1 = NA, correct = FALSE)
+fdrTbl(
+  obs.vec,
+  perm.list,
+  pname,
+  ntests,
+  lowerbound,
+  upperbound,
+  incr = 0.1,
+  cl = 0.95,
+  c1 = NA,
+  correct = "none"
+)
 }
 \arguments{
-\item{obs_vec}{observed vector of p-values.}
-
-\item{perm_list}{list of dataframes that include a column of permutation
-p-values (or statistics) in each. The length of the list permp = number of
-permutations.}
-
 \item{pname}{name of column in each list component dataframe that includes
 p-values (or statistics).}
 
@@ -34,15 +38,18 @@ upperbound on a -log10(p-value) scale. Default is 0.1.}
 
 \item{cl}{confidence level (default is .95).}
 
-\item{c1}{overdispersion parameter. If this parameter is not specified}
+\item{c1}{overdispersion parameter to account for dependencies among tests. If 
+all tests are known to be independent, then this parameter should be set to 1.}
 
-\item{correct}{logical, should confidence intervals be corrected for 
-multiplicity using the Benjamini and Yekutieli (2005) approach for selected
-parameters? If TRUE, confidence intervals will be corrected according to
-the selections specified by lowerbound, upperbound, and incr.
-(default initial value is NA), then the parameter is estimated from the
-data. If all tests are known to be independent, then this parameter should
-be set to 1.}
+\item{correct}{{"none", "BH"}, should confidence intervals be corrected for 
+multiplicity using a modification of the Benjamini and Yekutieli (2005) approach 
+for selecting and correcting intervals? (default is "none")}
+
+\item{obs_vec}{observed vector of p-values.}
+
+\item{perm_list}{list of dataframes that include a column of permutation
+p-values (or statistics) in each. The length of the list permp = number of
+permutations.}
 }
 \value{
 A dataframe is returned where rows correspond to p-value thresholds
@@ -61,15 +68,24 @@ Computes FDR estimates and confidence intervals for a sequence of potential
 significance thresholds.
 }
 \details{
-fdrTbl calls fdr_od. Output from fdrTbl() can be used for FDRplot() input.
+fdrTbl calls fdr_od for a series of discovery thresholds. 
+Output from fdrTbl() can be used for FDRplot() input.
+
+If correct = "BH", then confidence intervals will be corrected according to
+the thresholds specified by lowerbound, upperbound, and incr. Thresholds will 
+be selected if FDR is determined to be significantly different than 1. First
+a Z-score test is conducted using the Millstein & Volfson standard error estimate.
+Then BH FDR is computed according to the Benjamini and Yekutieli (2005) approach.
+CIs for selected thresholds will be adjusted to account for multiple CI estimation.
+For thresholds that are not selected, NA values are returned.
 }
 \examples{
 
 
-nrow_=100
-ncol_=100
-X = as.data.frame(matrix(rnorm(nrow_*ncol_),nrow=nrow_,ncol=ncol_))
-e = as.data.frame(matrix(rnorm(nrow_*ncol_),nrow=nrow_,ncol=ncol_))
+n.row=100
+n.col=100
+X = as.data.frame(matrix(rnorm(n.row*n.col),nrow=n.row,ncol=n.col))
+e = as.data.frame(matrix(rnorm(n.row*n.col),nrow=n.row,ncol=n.col))
 Y = .1*X + e
 nperm = 10
 
@@ -92,12 +108,13 @@ obs = myanalysis(X,Y)
 ## Generate permuted results
 perml = vector('list',nperm)
 for(p_ in 1:nperm){
-	X1 = X[order(runif(ncol_)),]
+	X1 = X[order(runif(n.col)),]
 	perml[[p_]] = myanalysis(X1,Y)
 }
 
 ## FDR results table
-fdrTbl(obs$pvalue,perml,"pvalue",ncol_,1,2)
+fdrTbl(obs$pvalue,perml,"pvalue",n.col,1,2)
+fdrTbl(obs$pvalue,perml,"pvalue",n.col,1,2,correct="BH")
 
 }
 \references{
@@ -105,7 +122,7 @@ Millstein J, Volfson D. 2013. Computationally efficient
 permutation-based confidence interval estimation for tail-area FDR.
 Frontiers in Genetics | Statistical Genetics and Methodology 4(179):1-11.
 
-Benjamini, Yoav, and Daniel Yekutieli. "False discovery rate?adjusted multiple 
+Benjamini, Yoav, and Daniel Yekutieli. "False discovery rate adjusted multiple 
 confidence intervals for selected parameters." Journal of the American Statistical 
 Association 100.469 (2005): 71-81.
 }
