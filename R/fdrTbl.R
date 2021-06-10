@@ -46,6 +46,7 @@
 #' null hypotheses} \item{odp }{estimated over-dispersion parameter} \item{S
 #' }{observed number of positive tests} \item{Sp }{total number of positive
 #' tests summed across all permuted result sets}
+#' @importFrom stats p.adjust
 #' @author Joshua Millstein
 #' @references Millstein J, Volfson D. 2013. Computationally efficient
 #' permutation-based confidence interval estimation for tail-area FDR.
@@ -130,7 +131,7 @@ function(obs.vec,perm.list,pname,ntests,lowerbound,upperbound,incr=.1,cl=.95,c1=
       qval = p.adjust(p, method="BH")
       sig = qval <= alpha
       R = sum(sig)
-      alpha_a = R * alpha/length(p)        
+      alpha.a = R * alpha/length(p)        
       ll.a = exp(log(tmpt$fdr) - qnorm(1 - alpha.a/2) * se.fdr)
       ul.a = exp(log(tmpt$fdr) + qnorm(1 - alpha.a/2) * se.fdr)
       ll.a = ifelse(sig, ll.a, NA)

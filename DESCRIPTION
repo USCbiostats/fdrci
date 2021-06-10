@@ -2,7 +2,7 @@ Package: fdrci
 Type: Package
 Title: Permutation-Based FDR Point and Confidence Interval Estimation
 Version: 2.2
-Date: 2018-2-21
+Date: 2021-6-9
 Authors@R: person(
   "Joshua", "Millstein", email = "joshua.millstein@usc.edu",
   role = c("aut", "cre"))
