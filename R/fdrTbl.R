@@ -6,14 +6,14 @@
 #' fdrTbl calls fdr_od for a series of discovery thresholds. 
 #' Output from fdrTbl() can be used for FDRplot() input.
 #' 
-#' @param obs_vec observed vector of p-values.
-#' @param perm_list list of dataframes that include a column of permutation
+#' @param obs.vec observed vector of p-values.
+#' @param perm.list list of dataframes that include a column of permutation
 #' p-values (or statistics) in each. The length of the list permp = number of
 #' permutations.
 #' @param pname name of column in each list component dataframe that includes
 #' p-values (or statistics).
 #' @param ntests total number of observed tests, which is usually the same as
-#' the length of obs_vec and the number of rows in each perm_list dataframe.
+#' the length of obs.vec and the number of rows in each perm.list dataframe.
 #' However, this may not be the case if results were filtered by a p-value
 #' threshold or statistic threshold. If filtering was conducted then lowerbound
 #' must be greater (more extreme) than the filtering criterion.
