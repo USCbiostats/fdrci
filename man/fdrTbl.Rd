@@ -18,11 +18,17 @@ fdrTbl(
 )
 }
 \arguments{
+\item{obs.vec}{observed vector of p-values.}
+
+\item{perm.list}{list of dataframes that include a column of permutation
+p-values (or statistics) in each. The length of the list permp = number of
+permutations.}
+
 \item{pname}{name of column in each list component dataframe that includes
 p-values (or statistics).}
 
 \item{ntests}{total number of observed tests, which is usually the same as
-the length of obs_vec and the number of rows in each perm_list dataframe.
+the length of obs.vec and the number of rows in each perm.list dataframe.
 However, this may not be the case if results were filtered by a p-value
 threshold or statistic threshold. If filtering was conducted then lowerbound
 must be greater (more extreme) than the filtering criterion.}
@@ -44,12 +50,6 @@ all tests are known to be independent, then this parameter should be set to 1.}
 \item{correct}{{"none", "BH"}, should confidence intervals be corrected for 
 multiplicity using a modification of the Benjamini and Yekutieli (2005) approach 
 for selecting and correcting intervals? (default is "none")}
-
-\item{obs_vec}{observed vector of p-values.}
-
-\item{perm_list}{list of dataframes that include a column of permutation
-p-values (or statistics) in each. The length of the list permp = number of
-permutations.}
 }
 \value{
 A dataframe is returned where rows correspond to p-value thresholds
