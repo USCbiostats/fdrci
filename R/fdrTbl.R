@@ -97,7 +97,10 @@
 #' @importFrom stats pnorm
 #' @export
 fdrTbl <-
-function(obs.vec,perm.list,pname,ntests,lowerbound,upperbound,incr=.1,cl=.95,c1=NA,correct="none"){
+function(obs.vec, perm.list = NULL, pname, ntests, lowerbound, upperbound, incr = .1, cl = .95, c1 = NA, correct = "none",
+         # Options for parametric
+         meff = TRUE, seff = TRUE, mymat, nperms = 5) {
+  
 	# obs.vec is a vector of observed p-values
 	# lowerbound and upperbound define -log10(p-value) range over which fdr is computed for a sequence of thresholds
 	# If obs.vec and perm.list have high p-values filtered out, then lowerbound should be >= filtering threshold on -log10(p-value) scale 
@@ -105,14 +108,32 @@ function(obs.vec,perm.list,pname,ntests,lowerbound,upperbound,incr=.1,cl=.95,c1=
 	# pname contains a string that is the name of the permutation p-value column
 	# ntests is the number of tests conducted (if no filtering is done, ntests == length(obs.vec)
 
-	plotdat = as.data.frame(matrix(NA,nrow=0,ncol=8))
-	names(plotdat) = c("threshold","fdr","ll","ul","pi0","odp","S","Sp")
+	plotdat = as.data.frame(matrix(NA, nrow = 0, ncol = 8))
+	names(plotdat) = c("threshold", "fdr", "ll", "ul", "pi0", "odp", "S", "Sp")
 	thres = seq(lowerbound,upperbound,incr)
-	for(i in 1:length(thres)){
-	   plotdat[i,"threshold"] = thres[i]
-	   thr = 10^-(thres[i])
-	   tmp = fdr_od(obs.vec,perm.list,pname,ntests,thr,cl=.95,c1)
-	   if(length(tmp) == length(plotdat) - 1) plotdat[i,-1] = tmp
+	
+	if(is.null(perm.list)) {
+	  # Checks
+	  if(nperms <= 0) stop("nperms must be a positive integer")
+	  if(!(meff %in% c(FALSE, TRUE))) stop("meff must be TRUE or FALSE")
+	  if(!(seff %in% c(FALSE, TRUE))) stop("seff must be TRUE or FALSE")
+	  if(!is.matrix(mymat) & !is.data.frame(mymat)) stop("mymat must be a matrix or data frame")
+	  
+	  # Parametric 
+	  for(i in 1:length(thres)) {
+	    plotdat[i,"threshold"] = thres[i]
+	    thr = 10^-(thres[i])
+	    tmp = fdr_od(obs.vec, permp = perm.list, pname, ntests, thr, cl = .95, c1, meff = meff, seff = seff, mymat = mymat, nperms = nperms)
+	    if(length(tmp) == length(plotdat) - 1) plotdat[i, -1] = tmp
+	  }
+	} else {
+	  # Permutation
+	  for(i in 1:length(thres)) {
+	    plotdat[i,"threshold"] = thres[i]
+	    thr = 10^-(thres[i])
+	    tmp = fdr_od(obs.vec, permp = perm.list, pname, ntests, thr, cl = .95, c1)
+	    if(length(tmp) == length(plotdat) - 1) plotdat[i, -1] = tmp
+	   }
 	}
 	
 	if(is.element(correct, "BH")){
@@ -120,20 +141,20 @@ function(obs.vec,perm.list,pname,ntests,lowerbound,upperbound,incr=.1,cl=.95,c1=
 		bb = !is.na(plotdat$ll)
 		cc = !is.na(plotdat$ul)
 		indx = which( aa & bb & cc )
-		plotdat[!is.element(1:nrow(plotdat),indx), "ll"] = NA
-    plotdat[!is.element(1:nrow(plotdat),indx), "ul"] = NA
+		plotdat[!is.element(1:nrow(plotdat), indx), "ll"] = NA
+    plotdat[!is.element(1:nrow(plotdat), indx), "ul"] = NA
     if (length(indx) > 1) {
       tmpt = plotdat[indx, c("fdr", "ll", "ul")]
       alpha = 1 - cl
-      se.fdr = (log(tmpt$fdr) - log(tmpt$ll))/qnorm(1 - alpha/2)
+      se.fdr = (log(tmpt$fdr) - log(tmpt$ll)) / qnorm(1 - alpha / 2)
       z = log(tmpt$fdr)/se.fdr
       p = pnorm(z, lower.tail = TRUE)
-      qval = p.adjust(p, method="BH")
-      sig = qval <= alpha
+      qval = p.adjust(p, method = "BH")
+      sig = (qval <= alpha)
       R = sum(sig)
-      alpha.a = R * alpha/length(p)        
-      ll.a = exp(log(tmpt$fdr) - qnorm(1 - alpha.a/2) * se.fdr)
-      ul.a = exp(log(tmpt$fdr) + qnorm(1 - alpha.a/2) * se.fdr)
+      alpha.a = R * alpha / length(p)        
+      ll.a = exp(log(tmpt$fdr) - qnorm(1 - alpha.a / 2) * se.fdr)
+      ul.a = exp(log(tmpt$fdr) + qnorm(1 - alpha.a / 2) * se.fdr)
       ll.a = ifelse(sig, ll.a, NA)
       ul.a = ifelse(sig, ul.a, NA)
       plotdat[indx, "ll"] = ifelse(ll.a <= 1, ll.a, 1)

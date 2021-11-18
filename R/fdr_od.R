@@ -120,6 +120,7 @@ fdr_od <-
       
       if(s > 1 & seff) {
           s = fdrci:::meff.jm(mymat[, s.ind], B = nperms)
+          s = round(s, 1)
       }
         
       # Calculate fdr
@@ -137,6 +138,7 @@ fdr_od <-
       
       rslt = c(fdr, ll, ul, NA, NA, s, NA)
       names(rslt) = c("fdr", "ll", "ul", "pi0", "c1", "S", "Sp")
+      
     } else {
       
       # Permutation-based FDR

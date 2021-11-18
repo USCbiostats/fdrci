@@ -62,9 +62,9 @@ obs = myanalysis(X,Y)
 
 # Generate permuted results
 perml = vector('list',nperm)
-for(p_ in 1:nperm){
+for(perm in 1:nperm){
 	X1 = X[order(runif(nvar)),]
-	perml[[p_]] = myanalysis(X1,Y)
+	perml[[perm]] = myanalysis(X1,Y)
 }
 
 # FDR results table
