@@ -80,64 +80,122 @@
 #' 	perml[[p_]] = myanalysis(X1,Y)
 #' }
 #' 
-#' ## FDR results
-#' fdr_od(obs$pvalue,perml,"pvalue",nvar,.05)
+#' ## FDR results (permutation)
+#' fdr_od(obs$pvalue,perml,"pvalue",nvar, thres = .05)
+#' 
+#' ## FDR results (parametric)
+#' fdr_od(obs$pvalue, permp = NULL, thres = 0.05, meff = FALSE, seff = FALSE, mymat = Xå)
 #' @export
+#' 
 fdr_od <-
-function(obsp,permp,pnm,ntests,thres,cl=.95,c1=NA){
-      z_ = qnorm(1 - (1 - cl)/2) # two-tailed test
-	pcount = rep(NA,length(permp))
-	for(p_ in 1:length(permp)){
-	   permp[[p_]][,pnm] = ifelse(permp[[p_]][,pnm] <= thres,1,0)
-	   pcount[p_] = sum(permp[[p_]][,pnm],na.rm=TRUE)
-	}
-	# over-dispersion parameter is observed variance of p in permuted data / expected
-	p = mean(pcount,na.rm=TRUE)/ntests # estimate p
-	e_vr = ntests*p*(1 - p)
-	o_vr = var(pcount,na.rm=TRUE)
-	if( is.na( c1 ) ) {
-	   c1 = o_vr / e_vr
-	   if( !is.na( c1 ) ) if( c1 < 1) c1 = 1
-	} 
+  function(obsp, 
+           permp = NULL,
+           pnm,
+           ntests,
+           thres,
+           cl = .95,
+           c1 = NA,
+           # Options for parametric
+           meff = TRUE,
+           seff = TRUE,
+           mymat, 
+           nperms = 5) {
+    
+    z_ = qnorm(1 - (1 - cl) / 2) # two-tailed test
+    
+    ## if permp = NULL do parametric
+    if(is.null(permp)) {
+      
+      # m is the number of tests
+      m = length(obsp) 
+    
+      # s is the number of p-values < thres
+      s.ind = (obsp <= thres)
+      s = sum(s.ind)
 
-	nperm = length(permp)
-	mo = ntests
-	ro = sum(obsp <= thres)
-	vp = sum(pcount)
-	vp1 = vp
-  	rslt = rep(NA,4)
-  	if(ro > 0){
-		if(vp == 0) vp = 1
-		mean.vp = vp / nperm
-        		fdr0 = mean.vp / ro
-		num = mo - ro
-		denom = mo - (vp/nperm)
-		pi0 = num / denom
-		
-		# Rule of thumb: if num or denom is < 20, then pi0 is not stable so set it to the conservative value of 1
-		pi0 = ifelse( num < 20 | denom < 20, 1, pi0 )
-		if( pi0 > 1 ) pi0 = 1
-        		if( pi0 < 0.5 ) pi0 = 0.5    # updated 10/14/16 to limit influence of pi0
-        		fdr = fdr0 * pi0    # updated calculation of fdr to be robust to ro = mtests
-		
-		# variance of FDR
-        		mp = nperm * mo
-        		t1 = 1 / vp
-        		denom = mp - vp
-        		t2 = 1 / denom
-        		t3 = 1 / ro
-        		denom = ntests - ro
-        		if( denom < 1 ) denom = 1  # updated 10/14/16 to avoid inf t4
-        		t4 = 1 /  denom
-        		s2fdr = (t1 + t2 + t3 + t4) * c1
-        		ul = exp(log(fdr) + z_ * sqrt(s2fdr))
-        		ll = exp(log(fdr) - z_ * sqrt(s2fdr))
-	
-		rslt = c(fdr,ll,ul,pi0)
-		rslt = ifelse(rslt > 1, 1, rslt) # FDR > 1 does not make sense, thus set to 1 in this case
-		rslt = c(rslt,c1,ro,vp1)
-		names(rslt) = c("fdr", "ll", "ul", "pi0", "c1", "S", "Sp")
-	} 
-	return(rslt)
-}
+      # If effective number of tests are to be calculated...
+      if(meff) {
+        m = fdrci:::meff.jm(mymat, B = nperms)
+      }
+      
+      if(s > 1 & seff) {
+          s = fdrci:::meff.jm(mymat[, s.ind], B = nperms)
+      }
+        
+      # Calculate fdr
+      t1 = m * thres / s
+      t2 = (1 - (s / m)) / (1 - thres)
+      fdr = t1 * t2
+      if(fdr > 1) fdr = 1
+      
+      s2fdr = (1 / s) + (1 / (m - s))
+      
+      # Get upper and lower limit
+      ul = exp(log(fdr) + z_ * sqrt(s2fdr))
+      ll = exp(log(fdr) - z_ * sqrt(s2fdr))
+      if(ul > 1) ul = 1
+      
+      rslt = c(fdr, ll, ul, NA, NA, s, NA)
+      names(rslt) = c("fdr", "ll", "ul", "pi0", "c1", "S", "Sp")
+    } else {
+      
+      # Permutation-based FDR
+      pcount = rep(NA,length(permp))
+      for(p_ in 1:length(permp)){
+        permp[[p_]][, pnm] = ifelse(permp[[p_]][, pnm] <= thres, 1, 0)
+        pcount[p_] = sum(permp[[p_]][, pnm], na.rm = TRUE)
+      }
+      
+      # over-dispersion parameter is observed variance of p in permuted data / expected
+      p = mean(pcount, na.rm = TRUE) / ntests # estimate p
+      e_vr = ntests * p * (1 - p)
+      o_vr = var(pcount, na.rm = TRUE)
+      if( is.na( c1 ) ) {
+        c1 = o_vr / e_vr
+        if(!is.na(c1)) if(c1 < 1) c1 = 1
+      } 
+      
+      nperm = length(permp)
+      mo = ntests
+      ro = sum(obsp <= thres)
+      vp = sum(pcount)
+      vp1 = vp
+      rslt = rep(NA, 4)
+      if(ro > 0){
+        if(vp == 0) vp = 1
+        mean.vp = vp / nperm
+        fdr0 = mean.vp / ro
+        num = mo - ro
+        denom = mo - (vp / nperm)
+        pi0 = num / denom
+        
+        # Rule of thumb: if num or denom is < 20, then pi0 is not stable so set it to the conservative value of 1
+        pi0 = ifelse(num < 20 | denom < 20, 1, pi0)
+        if(pi0 > 1) pi0 = 1
+        if(pi0 < 0.5) pi0 = 0.5    # updated 10/14/16 to limit influence of pi0
+        fdr = fdr0 * pi0    # updated calculation of fdr to be robust to ro = mtests
+        
+        # variance of FDR
+        mp = nperm * mo
+        t1 = 1 / vp
+        denom = mp - vp
+        t2 = 1 / denom
+        t3 = 1 / ro
+        denom = ntests - ro
+        if( denom < 1 ) denom = 1  # updated 10/14/16 to avoid inf t4
+        t4 = 1 /  denom
+        s2fdr = (t1 + t2 + t3 + t4) * c1
+        ul = exp(log(fdr) + z_ * sqrt(s2fdr))
+        ll = exp(log(fdr) - z_ * sqrt(s2fdr))
+        
+        rslt = c(fdr,ll,ul,pi0)
+        rslt = ifelse(rslt > 1, 1, rslt) # FDR > 1 does not make sense, thus set to 1 in this case
+        rslt = c(rslt,c1,ro,vp1)
+        names(rslt) = c("fdr", "ll", "ul", "pi0", "c1", "S", "Sp")
+      } 
+    }
+    
+    
+    return(rslt)
+  }
 

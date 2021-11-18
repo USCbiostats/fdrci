@@ -4,7 +4,19 @@
 \alias{fdr_od}
 \title{Permutation-Based FDR and Confidence Interval}
 \usage{
-fdr_od(obsp, permp, pnm, ntests, thres, cl = 0.95, c1 = NA)
+fdr_od(
+  obsp,
+  permp = NULL,
+  pnm,
+  ntests,
+  thres,
+  cl = 0.95,
+  c1 = NA,
+  meff = TRUE,
+  seff = TRUE,
+  mymat,
+  nperms = 5
+)
 }
 \arguments{
 \item{obsp}{observed vector of p-values.}
@@ -92,8 +104,11 @@ for(p_ in 1:nperm){
 	perml[[p_]] = myanalysis(X1,Y)
 }
 
-## FDR results
-fdr_od(obs$pvalue,perml,"pvalue",nvar,.05)
+## FDR results (permutation)
+fdr_od(obs$pvalue,perml,"pvalue",nvar, thres = .05)
+
+## FDR results (parametric)
+fdr_od(obs$pvalue, permp = NULL, thres = 0.05, meff = FALSE, seff = FALSE, mymat = Xå)
 }
 \references{
 Millstein J, Volfson D. 2013. Computationally efficient

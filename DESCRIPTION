@@ -14,4 +14,4 @@ Description: FDR functions for permutation-based estimators, including pi0 as we
              from the permuted data.
 License: Artistic-2.0
 LazyLoad: yes
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
