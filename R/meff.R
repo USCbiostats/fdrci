@@ -1,6 +1,6 @@
 # Millstein version of Meff, effective number of independent variables
 # rows of mydat are individuals, columns are variables
-meff.jm = function(mydat, B = 1){
+meff.jm = function(mydat, B = 1, seed){
   
   cmat = cor(mydat, use = "pairwise.complete.obs") 
   
@@ -17,6 +17,7 @@ meff.jm = function(mydat, B = 1){
   rst = eigen(cmat, only.values = TRUE)
   v1 = rst$values
   
+  set.seed(seed)
   out <- numeric()
   for(b in 1:B) {
     # randomize vector

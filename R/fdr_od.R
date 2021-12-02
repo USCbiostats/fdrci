@@ -1,4 +1,4 @@
-#' Permutation-Based FDR and Confidence Interval
+#' Tail-end FDR and Confidence Interval
 #' 
 #' This function can be used to estimate FDR, corresponding confidence
 #' interval, and pi0, the proportion of true null hypotheses, given a selected
@@ -16,14 +16,14 @@
 #' be necessary to insure that smaller values are more likely associated with
 #' false null hypotheses than larger values. In certain situations, for
 #' instance when a large proportion of tests meet the significance threshold,
-#' pi0 is estimated to be very small, and thus has a large influence on the FDR
-#' estimate. To limit this influence, pi0 is constrained to be .5 or greater,
+#' \code{pi0} is estimated to be very small, and thus has a large influence on the FDR
+#' estimate. To limit this influence, \code{pi0} is constrained to be .5 or greater,
 #' resulting in a more conservative estimate under these conditions.
 #' 
 #' @param obsp observed vector of p-values.
 #' @param permp list of dataframes that include a column of permutation
 #' p-values (or statistics) in each. The length of the list permp = number of
-#' permutations.
+#' permutations. If \code{permp = NULL}, then the parametric estimator is calculated.
 #' @param pnm name of column in each list component dataframe that includes
 #' p-values (or statistics).
 #' @param ntests total number of observed tests, which is usually the same as
@@ -37,12 +37,26 @@
 #' (default initial value is NA), then the parameter is estimated from the
 #' data. If all tests are known to be independent, then this parameter should
 #' be set to 1.
-#' @return A list which includes: \item{FDR }{FDR point estimate} \item{ll
+#' @param meff Logical. \code{TRUE} implies the calculation of the effective number of tests based on the JM estimator (Default is \code{TRUE})
+#' @param seff Logical. \code{TRUE} implies the calculation of the effective number of rejected hypotheses based on the JM estimator (Default is \code{TRUE})
+#' @param mymat Matrix. Design matrix used to calculate the p-values provided in \code{obsp}.
+#' @param nperms Integer. Number of permutations needed to estimate the effective number of (rejected) tests. (Must be non-zero, default is 5)
+#' @param seed Integer. Seed for calculated permuted data for the JM estimator (Must be non-zero, default is 1234)
+
+#' @return For the permutation-based estimator: 
+#' A list which includes: \item{FDR }{FDR point estimate} \item{ll
 #' }{lower confidence limit} \item{ul }{upper confidence limit} \item{pi0
 #' }{proportion of true null hypotheses} \item{c1 }{overdispersion parameter}
 #' \item{S }{observed number of positive tests} \item{Sp }{total number of
 #' positive tests summed across all permuted result sets}
-#' @author Joshua Millstein
+#' 
+#' For the parametric-based estimator:
+#' A list which includes: \item{FDR }{FDR point estimate} \item{ll
+#' }{lower confidence limit} \item{ul }{upper confidence limit} \item{M}{total number of tests}
+#' \item{M.eff}{effective number of tests. \code{NA} if \code{meff = FALSE}}
+#' \item{S }{observed number of positive tests}\item{S.eff }{effective number of positive tests. \code{NA} if \code{seff = FALSE}}
+#' 
+#' @author Joshua Millstein, Eric S. Kawaguchi
 #' @references Millstein J, Volfson D. 2013. Computationally efficient
 #' permutation-based confidence interval estimation for tail-area FDR.
 #' Frontiers in Genetics | Statistical Genetics and Methodology 4(179):1-11.
@@ -84,7 +98,7 @@
 #' fdr_od(obs$pvalue,perml,"pvalue",nvar, thres = .05)
 #' 
 #' ## FDR results (parametric)
-#' fdr_od(obs$pvalue, permp = NULL, thres = 0.05, meff = FALSE, seff = FALSE, mymat = Xå)
+#' fdr_od(obs$pvalue, permp = NULL, thres = 0.05, meff = FALSE, seff = FALSE, mymat = X)
 #' @export
 #' 
 fdr_od <-
@@ -99,7 +113,8 @@ fdr_od <-
            meff = TRUE,
            seff = TRUE,
            mymat, 
-           nperms = 5) {
+           nperms = 5,
+           seed = 1234) {
     
     z_ = qnorm(1 - (1 - cl) / 2) # two-tailed test
     
@@ -107,26 +122,27 @@ fdr_od <-
     if(is.null(permp)) {
       
       # m is the number of tests
-      m = length(obsp) 
+      m0 = length(obsp) 
     
       # s is the number of p-values < thres
       s.ind = (obsp <= thres)
-      s = sum(s.ind)
+      s0 = sum(s.ind)
 
       # If effective number of tests are to be calculated...
-      if(meff) {
-        m = fdrci:::meff.jm(mymat, B = nperms)
-      }
-      
-      if(s > 1 & seff) {
-          s = fdrci:::meff.jm(mymat[, s.ind], B = nperms)
-          s = round(s, 1)
-      }
+      m = ifelse(meff, fdrci:::meff.jm(mymat, B = nperms, seed = seed), m0)
+      s = ifelse(s0 > 1 & seff, fdrci:::meff.jm(mymat[, s.ind], B = nperms, seed = seed), s0)
         
       # Calculate fdr
-      t1 = m * thres / s
-      t2 = (1 - (s / m)) / (1 - thres)
-      fdr = t1 * t2
+      
+      # If thres is 1 then FDR is 1
+      if (thres == 1) {
+        fdr = 1
+      } else {
+        t1 = m * thres / s
+        t2 = (1 - (s / m)) / (1 - thres)
+        fdr = t1 * t2
+      }
+
       if(fdr > 1) fdr = 1
       
       s2fdr = (1 / s) + (1 / (m - s))
@@ -136,8 +152,8 @@ fdr_od <-
       ll = exp(log(fdr) - z_ * sqrt(s2fdr))
       if(ul > 1) ul = 1
       
-      rslt = c(fdr, ll, ul, NA, NA, s, NA)
-      names(rslt) = c("fdr", "ll", "ul", "pi0", "c1", "S", "Sp")
+      rslt = c(fdr, ll, ul, m0, ifelse(meff, m, NA), s0, ifelse(seff, s, NA))
+      names(rslt) = c("fdr", "ll", "ul", "M", "M.eff", "S", "S.eff")
       
     } else {
       

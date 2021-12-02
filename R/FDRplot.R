@@ -51,10 +51,23 @@
 #' 	perml[[perm]] = myanalysis(X1,Y)
 #' }
 #' 
-#' # FDR results table
+#' # FDR results table (permutation)
 #' myfdrtbl = fdrTbl(obs$pvalue,perml,"pvalue",nvar,0,3)
 #' # Plot results
-#' FDRplot(myfdrtbl,0,3,annot="A. An Example")
+#' FDRplot(myfdrtbl,0,3,annot="A. An Example (Permutation)")
+#' 
+#' # FDR results table (parametric)
+#' myfdrtbl = fdrTbl(obs$pvalue, NULL, "pvalue", nvar, 0, 3, meff = TRUE, seff = TRUE,  mymat = X, nperms = 5)
+#' 
+#' # Plot resluts (based on M and S)
+#' FDRplot(myfdrtbl,0,3,annot="A. An Example (Parametric)")
+#' 
+#' # Plot results (based on Meff and Seff, if applicable)
+#' myfdrtbl2 = myfdrtbl
+#' myfdrtbl2[, "M"] = round(myfdrtbl[, "M.eff"], 1)
+#' myfdrtbl2[, "S"] = round(myfdrtbl[, "S.eff"], 1)
+#' FDRplot(myfdrtbl2,0,3,annot="B. An Example (Parametric) w/ Meff and Seff")
+#' 
 #' 
 #' @export
 FDRplot <-
