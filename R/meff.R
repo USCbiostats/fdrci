@@ -1,5 +1,30 @@
-# Millstein version of Meff, effective number of independent variables
-# rows of mydat are individuals, columns are variables
+#' Estimate the Effective Number of Tests
+#' 
+#' Estimate the effective number of tests using a permutation-based approach. 
+#' 
+#' @param mydat A design matrix with \eqn{n} observations (rows) and \eqn{p} covariates (columns).
+#' @param B Integer. Number of permutations to perform. (Default is 1)
+#' @param seed Integer. Setting the seed for reproducibility.
+#' @return Numeric. Returns the estimated effective number of tests averaged over \code{B} permutations.
+#' @author Joshua Millstein, Eric S. Kawaguchi
+#' @references Millstein J, Volfson D. 2013. Computationally efficient
+#' permutation-based confidence interval estimation for tail-area FDR.
+#' Frontiers in Genetics | Statistical Genetics and Methodology 4(179):1-11.
+#' @examples
+#' 
+#' # Independent
+#' ss=100
+#' nvar=100
+#' X = as.data.frame(matrix(rnorm(ss * nvar), nrow = ss, ncol = nvar))
+#' meff.jm(X, B = 5, seed = 1234)
+#' 
+#' # High correlation
+#' S = matrix(0.9, ss, nvar)
+#' diag(S) = 1
+#' X = as.matrix(X) %*% chol(S)
+#' meff.jm(X, B = 5, seed = 1234)
+#' @export
+#' 
 meff.jm = function(mydat, B = 1, seed){
   
   cmat = cor(mydat, use = "pairwise.complete.obs") 
