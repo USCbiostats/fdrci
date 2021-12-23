@@ -6,7 +6,7 @@
 \usage{
 fdrTbl(
   obs.vec,
-  perm.list,
+  perm.list = NULL,
   pname,
   ntests,
   lowerbound,
@@ -14,7 +14,12 @@ fdrTbl(
   incr = 0.1,
   cl = 0.95,
   c1 = NA,
-  correct = "none"
+  correct = "none",
+  meff = TRUE,
+  seff = TRUE,
+  mymat,
+  nperms = 5,
+  seed = 1234
 )
 }
 \arguments{
@@ -50,10 +55,22 @@ all tests are known to be independent, then this parameter should be set to 1.}
 \item{correct}{{"none", "BH"}, should confidence intervals be corrected for 
 multiplicity using a modification of the Benjamini and Yekutieli (2005) approach 
 for selecting and correcting intervals? (default is "none")}
+
+\item{meff}{Logical. To be passed into \code{fdr_od}. \code{TRUE} implies the calculation of the effective number of tests based on the JM estimator (Default is \code{TRUE})}
+
+\item{seff}{Logical. To be passed into \code{fdr_od}. \code{TRUE} implies the calculation of the effective number of rejected hypotheses based on the JM estimator (Default is \code{TRUE})}
+
+\item{mymat}{Matrix. To be passed into \code{fdr_od}. Design matrix used to calculate the p-values provided in \code{obsp}.}
+
+\item{nperms}{Integer. To be passed into \code{fdr_od}. Number of permutations needed to estimate the effective number of (rejected) tests. (Must be non-zero, default is 5)}
+
+\item{seed}{Integer. To be passed into \code{fdr_od}. Seed for calculated permuted data for the JM estimator (Must be non-zero, default is 1234)}
 }
 \value{
 A dataframe is returned where rows correspond to p-value thresholds
 in the sequence from lowerbound to upperbound and columns are:
+
+If permutation:
 c("threshold","fdr","ll","ul","pi0","odp","S","Sp") \item{threshold
 }{p-value threshold chosen to define positive tests} \item{fdr }{estimated
 FDR at the chosen p-value threshold} \item{ll }{estimated lower 95\%
@@ -62,6 +79,15 @@ confidence bound for the FDR estimate} \item{pi0 }{estimated percent of true
 null hypotheses} \item{odp }{estimated over-dispersion parameter} \item{S
 }{observed number of positive tests} \item{Sp }{total number of positive
 tests summed across all permuted result sets}
+
+If parametric:
+c("threshold","fdr","ll","ul","M","M.eff","S","S.eff") \item{threshold
+}{p-value threshold chosen to define positive tests} \item{fdr }{estimated
+FDR at the chosen p-value threshold} \item{ll }{estimated lower 95\%
+confidence bound for the FDR estimate} \item{ul }{estimated upper 95\%
+confidence bound for the FDR estimate} \item{M }{total number of tests}
+\item{M.eff}{Effective number of tests via the JM estimator} \item{S
+}{observed number of positive tests} \item{S.eff }{effective number of positive tests via the JM estimator}
 }
 \description{
 Computes FDR estimates and confidence intervals for a sequence of potential
@@ -107,15 +133,17 @@ obs = myanalysis(X,Y)
 
 ## Generate permuted results
 perml = vector('list',nperm)
-for(p_ in 1:nperm){
+for(perm in 1:nperm){
 	X1 = X[order(runif(n.col)),]
-	perml[[p_]] = myanalysis(X1,Y)
+	perml[[perm]] = myanalysis(X1,Y)
 }
 
-## FDR results table
+## FDR results table (permutation)
 fdrTbl(obs$pvalue,perml,"pvalue",n.col,1,2)
 fdrTbl(obs$pvalue,perml,"pvalue",n.col,1,2,correct="BH")
 
+## FDR results table (parametric)
+fdrTbl(obs$pvalue, NULL, "pvalue",n.col,1,2,meff = TRUE, seff = TRUE, mymat = X, nperms = 5)
 }
 \references{
 Millstein J, Volfson D. 2013. Computationally efficient
@@ -127,7 +155,7 @@ confidence intervals for selected parameters." Journal of the American Statistic
 Association 100.469 (2005): 71-81.
 }
 \author{
-Joshua Millstein
+Joshua Millstein, Eric S. Kawaguchi
 }
 \keyword{htest}
 \keyword{nonparametric}

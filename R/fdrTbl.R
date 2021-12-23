@@ -26,6 +26,12 @@
 #' @param cl confidence level (default is .95).
 #' @param c1 overdispersion parameter to account for dependencies among tests. If 
 #' all tests are known to be independent, then this parameter should be set to 1.
+#' @param meff Logical. To be passed into \code{fdr_od}. \code{TRUE} implies the calculation of the effective number of tests based on the JM estimator (Default is \code{TRUE})
+#' @param seff Logical. To be passed into \code{fdr_od}. \code{TRUE} implies the calculation of the effective number of rejected hypotheses based on the JM estimator (Default is \code{TRUE})
+#' @param mymat Matrix. To be passed into \code{fdr_od}. Design matrix used to calculate the p-values provided in \code{obsp}.
+#' @param nperms Integer. To be passed into \code{fdr_od}. Number of permutations needed to estimate the effective number of (rejected) tests. (Must be non-zero, default is 5)
+#' @param seed Integer. To be passed into \code{fdr_od}. Seed for calculated permuted data for the JM estimator (Must be non-zero, default is 1234)
+
 #' @param correct {"none", "BH"}, should confidence intervals be corrected for 
 #' multiplicity using a modification of the Benjamini and Yekutieli (2005) approach 
 #' for selecting and correcting intervals? (default is "none")
@@ -38,6 +44,8 @@
 #' For thresholds that are not selected, NA values are returned.
 #' @return A dataframe is returned where rows correspond to p-value thresholds
 #' in the sequence from lowerbound to upperbound and columns are:
+#' 
+#' If permutation:
 #' c("threshold","fdr","ll","ul","pi0","odp","S","Sp") \item{threshold
 #' }{p-value threshold chosen to define positive tests} \item{fdr }{estimated
 #' FDR at the chosen p-value threshold} \item{ll }{estimated lower 95\%
@@ -46,8 +54,18 @@
 #' null hypotheses} \item{odp }{estimated over-dispersion parameter} \item{S
 #' }{observed number of positive tests} \item{Sp }{total number of positive
 #' tests summed across all permuted result sets}
+#' 
+#' If parametric:
+#' c("threshold","fdr","ll","ul","M","M.eff","S","S.eff") \item{threshold
+#' }{p-value threshold chosen to define positive tests} \item{fdr }{estimated
+#' FDR at the chosen p-value threshold} \item{ll }{estimated lower 95\%
+#' confidence bound for the FDR estimate} \item{ul }{estimated upper 95\%
+#' confidence bound for the FDR estimate} \item{M }{total number of tests}
+#' \item{M.eff}{Effective number of tests via the JM estimator} \item{S
+#' }{observed number of positive tests} \item{S.eff }{effective number of positive tests via the JM estimator}
+#' 
 #' @importFrom stats p.adjust
-#' @author Joshua Millstein
+#' @author Joshua Millstein, Eric S. Kawaguchi
 #' @references Millstein J, Volfson D. 2013. Computationally efficient
 #' permutation-based confidence interval estimation for tail-area FDR.
 #' Frontiers in Genetics | Statistical Genetics and Methodology 4(179):1-11.
@@ -90,14 +108,19 @@
 #' 	perml[[perm]] = myanalysis(X1,Y)
 #' }
 #' 
-#' ## FDR results table
+#' ## FDR results table (permutation)
 #' fdrTbl(obs$pvalue,perml,"pvalue",n.col,1,2)
 #' fdrTbl(obs$pvalue,perml,"pvalue",n.col,1,2,correct="BH")
 #' 
+#' ## FDR results table (parametric)
+#' fdrTbl(obs$pvalue, NULL, "pvalue",n.col,1,2,meff = TRUE, seff = TRUE, mymat = X, nperms = 5)
 #' @importFrom stats pnorm
 #' @export
 fdrTbl <-
-function(obs.vec,perm.list,pname,ntests,lowerbound,upperbound,incr=.1,cl=.95,c1=NA,correct="none"){
+function(obs.vec, perm.list = NULL, pname, ntests, lowerbound, upperbound, incr = .1, cl = .95, c1 = NA, correct = "none",
+         # Options for parametric
+         meff = TRUE, seff = TRUE, mymat, nperms = 5, seed = 1234) {
+  
 	# obs.vec is a vector of observed p-values
 	# lowerbound and upperbound define -log10(p-value) range over which fdr is computed for a sequence of thresholds
 	# If obs.vec and perm.list have high p-values filtered out, then lowerbound should be >= filtering threshold on -log10(p-value) scale 
@@ -105,14 +128,35 @@ function(obs.vec,perm.list,pname,ntests,lowerbound,upperbound,incr=.1,cl=.95,c1=
 	# pname contains a string that is the name of the permutation p-value column
 	# ntests is the number of tests conducted (if no filtering is done, ntests == length(obs.vec)
 
-	plotdat = as.data.frame(matrix(NA,nrow=0,ncol=8))
-	names(plotdat) = c("threshold","fdr","ll","ul","pi0","odp","S","Sp")
+	plotdat = as.data.frame(matrix(NA, nrow = 0, ncol = 8))
 	thres = seq(lowerbound,upperbound,incr)
-	for(i in 1:length(thres)){
-	   plotdat[i,"threshold"] = thres[i]
-	   thr = 10^-(thres[i])
-	   tmp = fdr_od(obs.vec,perm.list,pname,ntests,thr,cl=.95,c1)
-	   if(length(tmp) == length(plotdat) - 1) plotdat[i,-1] = tmp
+	
+	if(is.null(perm.list)) {
+	  # Parametric 
+	  names(plotdat) = c("threshold", "fdr", "ll", "ul", "M", "M.eff", "S", "S.eff")
+	  
+	  # Checks
+	  if(nperms <= 0) stop("nperms must be a positive integer")
+	  if(!(meff %in% c(FALSE, TRUE))) stop("meff must be TRUE or FALSE")
+	  if(!(seff %in% c(FALSE, TRUE))) stop("seff must be TRUE or FALSE")
+	  if(!is.matrix(mymat) & !is.data.frame(mymat)) stop("mymat must be a matrix or data frame")
+
+	  for(i in 1:length(thres)) {
+	    plotdat[i,"threshold"] = thres[i]
+	    thr = 10^-(thres[i])
+	    tmp = fdr_od(obs.vec, permp = perm.list, pname, ntests, thr, cl = .95, c1, meff = meff, seff = seff, mymat = mymat, nperms = nperms)
+	    if(length(tmp) == length(plotdat) - 1) plotdat[i, -1] = tmp
+	  }
+	} else {
+	  # Permutation
+	  names(plotdat) = c("threshold", "fdr", "ll", "ul", "pi0", "odp", "S", "Sp")
+	  
+	  for(i in 1:length(thres)) {
+	    plotdat[i,"threshold"] = thres[i]
+	    thr = 10^-(thres[i])
+	    tmp = fdr_od(obs.vec, permp = perm.list, pname, ntests, thr, cl = .95, c1)
+	    if(length(tmp) == length(plotdat) - 1) plotdat[i, -1] = tmp
+	   }
 	}
 	
 	if(is.element(correct, "BH")){
@@ -120,20 +164,20 @@ function(obs.vec,perm.list,pname,ntests,lowerbound,upperbound,incr=.1,cl=.95,c1=
 		bb = !is.na(plotdat$ll)
 		cc = !is.na(plotdat$ul)
 		indx = which( aa & bb & cc )
-		plotdat[!is.element(1:nrow(plotdat),indx), "ll"] = NA
-    plotdat[!is.element(1:nrow(plotdat),indx), "ul"] = NA
+		plotdat[!is.element(1:nrow(plotdat), indx), "ll"] = NA
+    plotdat[!is.element(1:nrow(plotdat), indx), "ul"] = NA
     if (length(indx) > 1) {
       tmpt = plotdat[indx, c("fdr", "ll", "ul")]
       alpha = 1 - cl
-      se.fdr = (log(tmpt$fdr) - log(tmpt$ll))/qnorm(1 - alpha/2)
+      se.fdr = (log(tmpt$fdr) - log(tmpt$ll)) / qnorm(1 - alpha / 2)
       z = log(tmpt$fdr)/se.fdr
       p = pnorm(z, lower.tail = TRUE)
-      qval = p.adjust(p, method="BH")
-      sig = qval <= alpha
+      qval = p.adjust(p, method = "BH")
+      sig = (qval <= alpha)
       R = sum(sig)
-      alpha.a = R * alpha/length(p)        
-      ll.a = exp(log(tmpt$fdr) - qnorm(1 - alpha.a/2) * se.fdr)
-      ul.a = exp(log(tmpt$fdr) + qnorm(1 - alpha.a/2) * se.fdr)
+      alpha.a = R * alpha / length(p)        
+      ll.a = exp(log(tmpt$fdr) - qnorm(1 - alpha.a / 2) * se.fdr)
+      ul.a = exp(log(tmpt$fdr) + qnorm(1 - alpha.a / 2) * se.fdr)
       ll.a = ifelse(sig, ll.a, NA)
       ul.a = ifelse(sig, ul.a, NA)
       plotdat[indx, "ll"] = ifelse(ll.a <= 1, ll.a, 1)
