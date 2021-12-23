@@ -2,16 +2,29 @@
 % Please edit documentation in R/fdr_od.R
 \name{fdr_od}
 \alias{fdr_od}
-\title{Permutation-Based FDR and Confidence Interval}
+\title{Tail-area FDR and Confidence Interval}
 \usage{
-fdr_od(obsp, permp, pnm, ntests, thres, cl = 0.95, c1 = NA)
+fdr_od(
+  obsp,
+  permp = NULL,
+  pnm,
+  ntests,
+  thres,
+  cl = 0.95,
+  c1 = NA,
+  meff = TRUE,
+  seff = TRUE,
+  mymat,
+  nperms = 5,
+  seed = 1234
+)
 }
 \arguments{
 \item{obsp}{observed vector of p-values.}
 
 \item{permp}{list of dataframes that include a column of permutation
 p-values (or statistics) in each. The length of the list permp = number of
-permutations.}
+permutations. If \code{permp = NULL}, then the parametric estimator is calculated.}
 
 \item{pnm}{name of column in each list component dataframe that includes
 p-values (or statistics).}
@@ -30,13 +43,30 @@ statistic threshold. If filtering was conducted then thres must be smaller
 (default initial value is NA), then the parameter is estimated from the
 data. If all tests are known to be independent, then this parameter should
 be set to 1.}
+
+\item{meff}{(For parametric estimation, if \code{permp = NULL}.) Logical. \code{TRUE} implies the calculation of the effective number of tests based on the JM estimator (Default is \code{TRUE})}
+
+\item{seff}{(For parametric estimation, if \code{permp = NULL}.) Logical. \code{TRUE} implies the calculation of the effective number of rejected hypotheses based on the JM estimator (Default is \code{TRUE})}
+
+\item{mymat}{(For parametric estimation, if \code{permp = NULL}.) Matrix. Design matrix used to calculate the p-values provided in \code{obsp}.}
+
+\item{nperms}{(For parametric estimation, if \code{permp = NULL}.) Integer. Number of permutations needed to estimate the effective number of (rejected) tests. (Must be non-zero, default is 5)}
+
+\item{seed}{(For parametric estimation, if \code{permp = NULL}.) Integer. Seed for calculated permuted data for the FDR estimator (Must be non-zero, default is 1234)}
 }
 \value{
+For the permutation-based estimator: 
 A list which includes: \item{FDR }{FDR point estimate} \item{ll
 }{lower confidence limit} \item{ul }{upper confidence limit} \item{pi0
 }{proportion of true null hypotheses} \item{c1 }{overdispersion parameter}
 \item{S }{observed number of positive tests} \item{Sp }{total number of
 positive tests summed across all permuted result sets}
+
+For the parametric-based estimator:
+A list which includes: \item{FDR }{FDR point estimate} \item{ll
+}{lower confidence limit} \item{ul }{upper confidence limit} \item{M}{total number of tests}
+\item{M.eff}{effective number of tests. \code{NA} if \code{meff = FALSE}}
+\item{S }{observed number of positive tests}\item{S.eff }{effective number of positive tests. \code{NA} if \code{seff = FALSE}}
 }
 \description{
 This function can be used to estimate FDR, corresponding confidence
@@ -56,8 +86,8 @@ p-values. Therefore, if raw statistics are used, then a transformation may
 be necessary to insure that smaller values are more likely associated with
 false null hypotheses than larger values. In certain situations, for
 instance when a large proportion of tests meet the significance threshold,
-pi0 is estimated to be very small, and thus has a large influence on the FDR
-estimate. To limit this influence, pi0 is constrained to be .5 or greater,
+\code{pi0} is estimated to be very small, and thus has a large influence on the FDR
+estimate. To limit this influence, \code{pi0} is constrained to be .5 or greater,
 resulting in a more conservative estimate under these conditions.
 }
 \examples{
@@ -92,8 +122,11 @@ for(p_ in 1:nperm){
 	perml[[p_]] = myanalysis(X1,Y)
 }
 
-## FDR results
-fdr_od(obs$pvalue,perml,"pvalue",nvar,.05)
+## FDR results (permutation)
+fdr_od(obs$pvalue,perml,"pvalue",nvar, thres = .05)
+
+## FDR results (parametric)
+fdr_od(obs$pvalue, permp = NULL, thres = 0.05, meff = FALSE, seff = FALSE, mymat = X)
 }
 \references{
 Millstein J, Volfson D. 2013. Computationally efficient
@@ -101,7 +134,7 @@ permutation-based confidence interval estimation for tail-area FDR.
 Frontiers in Genetics | Statistical Genetics and Methodology 4(179):1-11.
 }
 \author{
-Joshua Millstein
+Joshua Millstein, Eric S. Kawaguchi
 }
 \keyword{htest}
 \keyword{nonparametric}

@@ -9,11 +9,12 @@
 FDR functions for permutation-based estimators, including pi0 as well as FDR
 confidence intervals.  The confidence intervals account for dependencies
 between tests by the incorporation of an overdispersion parameter, which is
-estimated from the permuted data.
+estimated from the permuted data. The package also includes a parametric 
+analog of the same approach.
 }
 \details{
 \tabular{ll}{ Package: \tab fdrci\cr Type: \tab Package\cr Version: \tab
-2.1\cr Date: \tab 2018-02-21\cr License: \tab Artistic-2.0\cr LazyLoad: \tab
+2.3\cr Date: \tab 2021-12-22\cr License: \tab Artistic-2.0\cr LazyLoad: \tab
 yes\cr } This method is designed to compute FDR when a permutation-based
 approach has been utilized. The objective here is to identify a subset of
 positive tests that have corresponding statistics with a more exteme
@@ -36,9 +37,9 @@ permutation-based confidence interval estimation for tail-area FDR.
 Frontiers in Genetics | Statistical Genetics and Methodology 4(179):1-11.
 }
 \author{
-Joshua Millstein
+Joshua Millstein, Eric S. Kawaguchi
 
-Maintainer: Joshua Millstein <millsteinjoshua@gmail.com> Joshua Millstein
+Maintainer: Joshua Millstein <joshua.millstein@usc.edu> Joshua Millstein
 }
 \keyword{htest}
 \keyword{nonparametric}
