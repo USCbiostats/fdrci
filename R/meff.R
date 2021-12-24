@@ -10,7 +10,7 @@
 #' @references Millstein J, Volfson D. 2013. Computationally efficient
 #' permutation-based confidence interval estimation for tail-area FDR.
 #' Frontiers in Genetics | Statistical Genetics and Methodology 4(179):1-11.
-#' @importFrom stats cor
+#' @importFrom stats cor runif
 #' @examples
 #' 
 #' # Independent

@@ -70,7 +70,10 @@ for(p_ in 1:nperm){
 }
 
 # FDR results table
-myfdrtbl = fdrTbl(obs$pvalue,perml,"pvalue",nvar,0,3)
+myfdrtbl = fdrTbl(obs$pvalue,perml,"pvalue",nvar,0.5,3)
+myfdrtbl1 = fdrTbl(obs$pvalue,perml,"pvalue",n.col,0.5,3,correct="BH")
+fdrTbl(obs$pvalue, NULL, "pvalue",n.col,0.5,3,meff = TRUE, seff = TRUE, mymat = X, nperms = 5)
+
 # Plot results
 FDRplot(myfdrtbl,0,3,annot="A. An Example")
 ```

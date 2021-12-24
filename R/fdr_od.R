@@ -128,8 +128,8 @@ function(obsp,
     s0 = sum(s.ind)
     
     # If effective number of tests are to be calculated...
-    m = ifelse(meff, fdrci:::meff.jm(mymat, B = nperms, seed = seed), m0)
-    s = ifelse(s0 > 1 & seff, fdrci:::meff.jm(mymat[, s.ind], B = nperms, seed = seed), s0)
+    m = ifelse(meff, meff.jm(mymat, B = nperms, seed = seed), m0)
+    s = ifelse(s0 > 1 & seff, meff.jm(mymat[, s.ind], B = nperms, seed = seed), s0)
     
     # Calculate fdr
     
