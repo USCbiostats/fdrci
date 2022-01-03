@@ -19,11 +19,6 @@
 #' X = as.data.frame(matrix(rnorm(ss * nvar), nrow = ss, ncol = nvar))
 #' meff.jm(X, B = 5, seed = 1234)
 #' 
-#' # High correlation
-#' S = matrix(0.9, nvar, nvar)
-#' diag(S) = 1
-#' X = as.matrix(X) %*% chol(S)
-#' meff.jm(X, B = 5, seed = 1234)
 #' @export
 #' 
 meff.jm = function(mydat, B = 1, seed){
