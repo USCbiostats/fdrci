@@ -16,7 +16,7 @@
 #' ss=300
 #' nvar=100
 #' X = as.data.frame(matrix(rnorm(ss * nvar), nrow = ss, ncol = nvar))
-#' meff.jm(X, B = 5, seed = 1234)
+#' meff.jm(X, B = 5)
 #' 
 #' @export
 #' 

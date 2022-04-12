@@ -4,14 +4,12 @@
 \alias{meff.jm}
 \title{Estimate the Effective Number of Tests}
 \usage{
-meff.jm(mydat, B = 1, seed)
+meff.jm(mydat, B = 1)
 }
 \arguments{
 \item{mydat}{A design matrix with \eqn{n} observations (rows) and \eqn{p} covariates (columns).}
 
 \item{B}{Integer. Number of permutations to perform. (Default is 1)}
-
-\item{seed}{Integer. Setting the seed for reproducibility.}
 }
 \value{
 Numeric. Returns the estimated effective number of tests averaged over \code{B} permutations.
@@ -25,7 +23,7 @@ Estimate the effective number of tests using a permutation-based approach.
 ss=300
 nvar=100
 X = as.data.frame(matrix(rnorm(ss * nvar), nrow = ss, ncol = nvar))
-meff.jm(X, B = 5, seed = 1234)
+meff.jm(X, B = 5)
 
 }
 \references{
