@@ -4,7 +4,6 @@
 #' 
 #' @param mydat A design matrix with \eqn{n} observations (rows) and \eqn{p} covariates (columns).
 #' @param B Integer. Number of permutations to perform. (Default is 1)
-#' @param seed Integer. Setting the seed for reproducibility.
 #' @return Numeric. Returns the estimated effective number of tests averaged over \code{B} permutations.
 #' @author Joshua Millstein, Eric S. Kawaguchi
 #' @references Millstein J, Volfson D. 2013. Computationally efficient
@@ -21,7 +20,7 @@
 #' 
 #' @export
 #' 
-meff.jm = function(mydat, B = 1, seed){
+meff.jm = function(mydat, B = 1){
   
   cmat = cor(mydat, use = "pairwise.complete.obs") 
   
@@ -38,7 +37,8 @@ meff.jm = function(mydat, B = 1, seed){
   rst = eigen(cmat, only.values = TRUE)
   v1 = rst$values
   
-  set.seed(seed)
+  #if(!is.null(seed)) set.seed(seed)
+
   out <- numeric()
   for(b in 1:B) {
     # randomize vector
@@ -48,7 +48,7 @@ meff.jm = function(mydat, B = 1, seed){
     
     
     # Randomly permute each column wrt other columns enforcing independence
-    mydat1 = apply(mydat,2,pfun)
+    mydat1 = apply(mydat, 2, pfun)
     cmat = cor(mydat1, use = "pairwise.complete.obs") # rows of mydat are individuals
     
     # remove missing
@@ -67,12 +67,12 @@ meff.jm = function(mydat, B = 1, seed){
     # remove missing
     v1 = v1[!is.na(v1)]
     v2 = v2[!is.na(v2)]
-    l = min(length(v1),length(v2))
+    l = min(length(v1), length(v2))
     v1 = v1[1:l]
     v2 = v2[1:l]
     
     # variance inflation of top eigenvalues, sum1 vs sum2
-    flag = 0; i = 1; sum1=0; sum2=0;
+    flag = 0; i = 1; sum1 = 0; sum2 = 0;
     while(flag == 0){
       if(v1[i] > v2[i]){
         sum1 = sum1 + v1[i]
