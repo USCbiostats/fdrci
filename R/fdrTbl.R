@@ -30,7 +30,6 @@
 #' @param seff (For parametric estimation, if \code{perm.list = NULL}.) Logical. To be passed into \code{fdr_od}. \code{TRUE} implies the calculation of the effective number of rejected hypotheses based on the JM estimator (Default is \code{TRUE})
 #' @param mymat (For parametric estimation, if \code{perm.list = NULL}.) Matrix. To be passed into \code{fdr_od}. Design matrix used to calculate the p-values provided in \code{obsp}.
 #' @param nperms (For parametric estimation, if \code{perm.list = NULL}.) Integer. To be passed into \code{fdr_od}. Number of permutations needed to estimate the effective number of (rejected) tests. (Must be non-zero, default is 5)
-#' @param seed (For parametric estimation, if \code{perm.list = NULL}.) Integer. To be passed into \code{fdr_od}. Seed for calculated permuted data for the JM estimator (Must be non-zero, default is 1234)
 #' @param correct {"none", "BH"}, should confidence intervals be corrected for 
 #' multiplicity using a modification of the Benjamini and Yekutieli (2005) approach 
 #' for selecting and correcting intervals? (default is "none")
@@ -119,7 +118,7 @@
 fdrTbl <-
 function(obs.vec, perm.list = NULL, pname, ntests, lowerbound, upperbound, incr = .1, cl = .95, c1 = NA, correct = "none",
         # Options for parametric
-        meff = TRUE, seff = TRUE, mymat, nperms = 5, seed = 1234) {
+        meff = TRUE, seff = TRUE, mymat, nperms = 5) {
     
 	# obs.vec is a vector of observed p-values
 	# lowerbound and upperbound define -log10(p-value) range over which fdr is computed for a sequence of thresholds

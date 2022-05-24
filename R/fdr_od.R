@@ -41,7 +41,6 @@
 #' @param seff (For parametric estimation, if \code{permp = NULL}.) Logical. \code{TRUE} implies the calculation of the effective number of rejected hypotheses based on the JM estimator (Default is \code{TRUE})
 #' @param mymat (For parametric estimation, if \code{permp = NULL}.) Matrix. Design matrix used to calculate the p-values provided in \code{obsp}.
 #' @param nperms (For parametric estimation, if \code{permp = NULL}.) Integer. Number of permutations needed to estimate the effective number of (rejected) tests. (Must be non-zero, default is 5)
-#' @param seed (For parametric estimation, if \code{permp = NULL}.) Integer. Seed for calculated permuted data for the FDR estimator (Must be non-zero, default is 1234)
 #' 
 #' @return For the permutation-based estimator: 
 #' A list which includes: \item{FDR }{FDR point estimate} \item{ll
@@ -112,8 +111,7 @@ function(obsp,
          meff = TRUE,
          seff = TRUE,
          mymat, 
-         nperms = 5,
-         seed = 1234){
+         nperms = 5){
       
   z_ = qnorm(1 - (1 - cl)/2) # two-tailed test
   
@@ -128,8 +126,8 @@ function(obsp,
     s0 = sum(s.ind)
     
     # If effective number of tests are to be calculated...
-    m = ifelse(meff, meff.jm(mymat, B = nperms, seed = seed), m0)
-    s = ifelse(s0 > 1 & seff, meff.jm(mymat[, s.ind], B = nperms, seed = seed), s0)
+    m = ifelse(meff, meff.jm(mymat, B = nperms), m0)
+    s = ifelse(s0 > 1 & seff, meff.jm(mymat[, s.ind], B = nperms), s0)
     
     # Calculate fdr
     

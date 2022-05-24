@@ -2,9 +2,16 @@
 #' 
 #' Estimate the effective number of tests using a permutation-based approach. 
 #' 
+#' The effective no of independent vars is the sum of the scaled eigenvalues for truly independent vars (n) 
+#' minus the variance inflation of the top eigenvalues, that is, (observed - permuted)
+#' The sum of the eigenvalues of the correlation matrix = trace = sum of diag = n.
+#' The eigenvalues of variables X can be thought of as normalized % variance explained by X.
+#' Dependencies between variables will increase the magnitude of top eigenvalues,
+#' therefore, the effective number of independent variables is equal to the proportion of the
+#' sum of eigenvalues attributed to independence minus the proportion attributed to dependencies.
+#' 
 #' @param mydat A design matrix with \eqn{n} observations (rows) and \eqn{p} covariates (columns).
 #' @param B Integer. Number of permutations to perform. (Default is 1)
-#' @param seed Integer. Setting the seed for reproducibility.
 #' @return Numeric. Returns the estimated effective number of tests averaged over \code{B} permutations.
 #' @author Joshua Millstein, Eric S. Kawaguchi
 #' @references Millstein J, Volfson D. 2013. Computationally efficient
@@ -17,16 +24,16 @@
 #' ss=300
 #' nvar=100
 #' X = as.data.frame(matrix(rnorm(ss * nvar), nrow = ss, ncol = nvar))
-#' meff.jm(X, B = 5, seed = 1234)
+#' meff.jm(X, B = 5)
 #' 
 #' # High correlation
 #' S = matrix(0.9, ss, nvar)
 #' diag(S) = 1
 #' X = as.matrix(X) %*% chol(S)
-#' meff.jm(X, B = 5, seed = 1234)
+#' meff.jm(X, B = 5)
 #' @export
 #' 
-meff.jm = function(mydat, B = 1, seed){
+meff.jm = function(mydat, B = 1){
   
   cmat = cor(mydat, use = "pairwise.complete.obs") 
   
@@ -43,7 +50,6 @@ meff.jm = function(mydat, B = 1, seed){
   rst = eigen(cmat, only.values = TRUE)
   v1 = rst$values
   
-  set.seed(seed)
   out <- numeric()
   for(b in 1:B) {
     # randomize vector
@@ -87,14 +93,6 @@ meff.jm = function(mydat, B = 1, seed){
       i = i + 1
     }
     
-    # effective no of independent vars is sum of eigenvalues for truly independent vars (n) 
-    # minus the variance inflation of top eigenvalues, that is, (permuted - observed)
-    # sum of eigen values of correlation matrix = trace = sum of diag = n
-    # eigenvalue of variables X can be thought of as normalized % variance explained by X
-    # dependencies between vars will increase top eigenvalues according to dependent %variance
-    # therefore raw n = sum(v2) and dependent variance = (sum1 - sum2) or the inflation in eigenvalues due to dependence
-    # thus, the effective number of independent vars = total variance - dependentent variance = sum(v2) - (sum1 - sum2)
-    
     if(v1[1] > v2[1]){
       n = sum(v2) - (sum1 - sum2) 
     } else {
@@ -106,6 +104,7 @@ meff.jm = function(mydat, B = 1, seed){
   
   return(mean(out))
 }
+
 
 
 
