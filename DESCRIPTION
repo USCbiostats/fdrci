@@ -15,3 +15,7 @@ Description: FDR functions for permutation-based estimators, including pi0 as we
 License: Artistic-2.0
 LazyLoad: yes
 RoxygenNote: 7.1.2
+Suggests: 
+    rmarkdown,
+    knitr
+VignetteBuilder: knitr
