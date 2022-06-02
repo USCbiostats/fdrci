@@ -18,8 +18,7 @@ fdrTbl(
   meff = TRUE,
   seff = TRUE,
   mymat,
-  nperms = 5,
-  seed = 1234
+  nperms = 5
 )
 }
 \arguments{
@@ -63,8 +62,6 @@ for selecting and correcting intervals? (default is "none")}
 \item{mymat}{(For parametric estimation, if \code{perm.list = NULL}.) Matrix. To be passed into \code{fdr_od}. Design matrix used to calculate the p-values provided in \code{obsp}.}
 
 \item{nperms}{(For parametric estimation, if \code{perm.list = NULL}.) Integer. To be passed into \code{fdr_od}. Number of permutations needed to estimate the effective number of (rejected) tests. (Must be non-zero, default is 5)}
-
-\item{seed}{(For parametric estimation, if \code{perm.list = NULL}.) Integer. To be passed into \code{fdr_od}. Seed for calculated permuted data for the JM estimator (Must be non-zero, default is 1234)}
 }
 \value{
 A dataframe is returned where rows correspond to p-value thresholds

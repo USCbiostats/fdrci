@@ -15,8 +15,7 @@ fdr_od(
   meff = TRUE,
   seff = TRUE,
   mymat,
-  nperms = 5,
-  seed = 1234
+  nperms = 5
 )
 }
 \arguments{
@@ -51,8 +50,6 @@ be set to 1.}
 \item{mymat}{(For parametric estimation, if \code{permp = NULL}.) Matrix. Design matrix used to calculate the p-values provided in \code{obsp}.}
 
 \item{nperms}{(For parametric estimation, if \code{permp = NULL}.) Integer. Number of permutations needed to estimate the effective number of (rejected) tests. (Must be non-zero, default is 5)}
-
-\item{seed}{(For parametric estimation, if \code{permp = NULL}.) Integer. Seed for calculated permuted data for the FDR estimator (Must be non-zero, default is 1234)}
 }
 \value{
 For the permutation-based estimator: 

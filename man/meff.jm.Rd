@@ -4,14 +4,12 @@
 \alias{meff.jm}
 \title{Estimate the Effective Number of Tests}
 \usage{
-meff.jm(mydat, B = 1, seed)
+meff.jm(mydat, B = 1)
 }
 \arguments{
 \item{mydat}{A design matrix with \eqn{n} observations (rows) and \eqn{p} covariates (columns).}
 
 \item{B}{Integer. Number of permutations to perform. (Default is 1)}
-
-\item{seed}{Integer. Setting the seed for reproducibility.}
 }
 \value{
 Numeric. Returns the estimated effective number of tests averaged over \code{B} permutations.
@@ -19,19 +17,28 @@ Numeric. Returns the estimated effective number of tests averaged over \code{B} 
 \description{
 Estimate the effective number of tests using a permutation-based approach.
 }
+\details{
+The effective no of independent vars is the sum of the scaled eigenvalues for truly independent vars (n) 
+minus the variance inflation of the top eigenvalues, that is, (observed - permuted)
+The sum of the eigenvalues of the correlation matrix = trace = sum of diag = n.
+The eigenvalues of variables X can be thought of as normalized % variance explained by X.
+Dependencies between variables will increase the magnitude of top eigenvalues,
+therefore, the effective number of independent variables is equal to the proportion of the
+sum of eigenvalues attributed to independence minus the proportion attributed to dependencies.
+}
 \examples{
 
 # Independent
-ss=100
+ss=300
 nvar=100
 X = as.data.frame(matrix(rnorm(ss * nvar), nrow = ss, ncol = nvar))
-meff.jm(X, B = 5, seed = 1234)
+meff.jm(X, B = 5)
 
 # High correlation
 S = matrix(0.9, ss, nvar)
 diag(S) = 1
 X = as.matrix(X) \%*\% chol(S)
-meff.jm(X, B = 5, seed = 1234)
+meff.jm(X, B = 5)
 }
 \references{
 Millstein J, Volfson D. 2013. Computationally efficient
