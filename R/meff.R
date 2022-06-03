@@ -27,7 +27,7 @@
 #' meff.jm(X, B = 5)
 #' 
 #' # High correlation
-#' S = matrix(0.9, ss, nvar)
+#' S = matrix(0.9, nvar, nvar)
 #' diag(S) = 1
 #' X = as.matrix(X) %*% chol(S)
 #' meff.jm(X, B = 5)
