@@ -1,7 +1,7 @@
 ---
 title: "fdrci: FDR selection and adjustment - HGSOC"
 author: "Joshua Millstein"
-date: "6/31/2022"
+date: "6/4/2022"
 bibliography: references.bib
 output: rmarkdown::html_vignette
 vignette: >
@@ -17,21 +17,22 @@ knitr::opts_chunk$set(
 )
 ```
 
-# Introduction
-In the context of high grade serous ovarian cancer (HGSOC), we might be interested in more fully understanding the relationship between age, cancer stage and expression of prognistic genes in the tumor. This questions could be addressed in data hosted by Gene Expression Omnibus (GEO) and collected as part of our study [@millstein2020prognostic] involving expression of 513 genes measured in formalin-fixed paraffin-embedded (FFPE) tumor tissue from 3,769 women with HGSOC. 
+## Introduction
+In the context of high grade serous ovarian cancer (HGSOC), we might be interested in more fully understanding the relationship between age, cancer stage and gene expression in tumor tissue. These questions could be addressed in data hosted by Gene Expression Omnibus (GEO) and collected as part of our study [@millstein2020prognostic] involving 513 gene expression features measured in formalin-fixed paraffin-embedded (FFPE) tumor tissue from 3,769 women with HGSOC. 
 
-Gene expression is often approximately normally distributed in population data, so it would make sense to apply linear regression in a separate model for each gene, where expression is the outcome and age and stage are the predictors. If we are interested in the question of whether there is effect modification, for example, if the effect of stage on expression varies across different age groups, we could include an interaction term between age and stage. A p-value for the interaction could be computed for each gene using a Wald or F-test and multiplicity in testing could be address by computing FDR, such as the BH approach [@RN130].
+Gene expression is often approximately normally distributed in population data, so it would make sense to apply linear regression in a separate model for each gene, where expression is the outcome and age and stage are the predictors. If we are interested in the question of whether there is effect modification, for example, if the effect of stage on expression varies across different age groups, we could include an interaction term between age and stage. A p-value for the interaction could be computed for each gene using an F-test, and multiplicity in testing could be address by computing FDR, such as the Benjamini and Hochberg (BH) approach [@RN130].
 
-However, we might be concerned about the assumption of normality of residuals, and with many genes, this is could be hard to verify. To avoid this assumption, we can take a permutation based approach by randomly permuting the age*stage product term to generate sets of results approximately under the null hypothesis. The fdrci R package, which includes an approach to account for multiplicity [@JM-BY-FDR], could then be applied. Essentially, the investigator chooses a series of possible discovery thresholds, and at each threshold FDR is computed along with a p-value that tests the null hypothesis against the alternative that FDR is significantly less than one. The Benjamini and Yekutieli (BY) approach [@benjyek2005] via the Benjamini and Hochberg approach is used to select thresholds corresponding to rejected null hypotheses and to adjust selected FDR CIs for multiplicity. Thus, the investigator is free to choose post hoc from any one (or multiple) of the selected discovery thresholds while maintaining adequate control of FDR CI coverage.
+However, we might be concerned about the assumption of normality of error, and with many genes, this is could be hard to verify. To avoid this assumption, we can take a non-parametric permutation-based approach [@millstein2013computationally] by randomly permuting the age*stage product term to generate sets of results distributed approximately under the null hypothesis. The fdrci R package, which includes an approach to account for multiplicity in FDR CIs [@JM-BY-FDR], could then be applied. Essentially, the investigator chooses a series of possible discovery thresholds, and at each threshold FDR is computed along with a p-value that tests $\text{H}_0: FDR = 1$ against the alternative, $\text{H}_1: FDR < 1$. The Benjamini and Yekutieli (BY) approach [@benjyek2005] via the BH approach is used to select thresholds corresponding to rejected null hypotheses and to adjust selected FDR CIs for multiplicity. Thus, the investigator is free to choose post hoc from any one (or multiple) of the selected discovery thresholds while maintaining adequate control of FDR CI coverage.
 
 Organization
-1. Download HGSOC data from GEO
-2. Conduct analysis of effect modification between age and stage
-3. Generate multiple replicates of results under the null by permutation
-4. Compute FDR using the fdrci package with the "BH" option to account for multiplicity
-5. Final thoughts
 
-## First we'll load the libraries
+1.  Download HGSOC data from GEO
+2.  Conduct analysis of effect modification between age and stage
+3.  Generate multiple replicates of results under the null by permutation
+4.  Compute FDR using the fdrci package with the "BH" option to account for multiplicity
+5.  Final thoughts
+
+## First we load the libraries
 
 ```{r setup}
 # download and install fdrci from github or CRAN
@@ -51,10 +52,10 @@ library(ggplot2)
 set.seed(052422)
 ```
 
-# Download data from GEO
+## Download data from GEO
 The GEO id for the dataset is GSE132342. We can use it along with the R package GEOquery to get the Nanostring panel of gene expression features as well as some limited patient information including age group (based on quartiles of the training dataset with groups aged <53, 53-59, 60-66, and >=67), stage (dichotomized into early (FIGO stage I/II) and advanced (FIGO stage III/IV)). 
 
-```{r, resuts='hide', message='hide', warning=FALSE}
+```{r, message='hide', warning=FALSE}
 gset <- getGEO("GSE132342", GSEMatrix =TRUE, getGPL=TRUE)
 gset = gset$GSE132342_series_matrix.txt.gz
 
@@ -84,13 +85,12 @@ pemat <- cbind(pdat.p, t(edat)) %>%
   select(time.os, event.os, site, stage, age, fdat.p$Customer.Identifier[1]:fdat.p$Customer.Identifier[513])
 ```
 
+## Age*stage effect modification analysis
+Here we fit a linear model for each of the 513 gene expression features. The outcome is expression and the covariates are site (an indicator of the component study where a portion of the data were collected), age group, stage group, and an interaction between age and stage as defined by a factor variable we create by combining levels of age and stage. The statistic of interest is a p-value from an F-test of the interaction term. The output is a dataframe, `rslts`, that includes the gene name in the first column and the p-value in the second column. 
 
-# Age*stage effect modification analysis
-
-```{r, resuts='hide', message='hide', warning=FALSE}
+```{r, message='hide', warning=FALSE}
 # create interaction term manually
-pemat[, "ageStage"] = factor(paste(as.character(pemat[,"age"]), as.character(pemat[,"stage"]), sep="_"),
-                levels=c("q4_2", "q1_1", "q1_2", "q2_1", "q2_2", "q3_1", "q3_2", "q4_1"))
+pemat[, "ageStage"] = factor(paste(as.character(pemat[,"age"]), as.character(pemat[,"stage"]), sep="_"), levels=c("q4_2", "q1_1", "q1_2", "q2_1", "q2_2", "q3_1", "q3_2", "q4_1"))
 # Run interaction scan
 rslts <- foreach(j = 1:length(fdat.p$Customer.Identifier), .combine = rbind) %do% {
   fmla = paste(fdat.p$Customer.Identifier[j], "~ site + age + stage + ageStage")
@@ -103,17 +103,22 @@ rslts[,"p_value"] = as.numeric(rslts[,"p_value"])
 rslts.obs = rslts
 ```
 
-# Compute BH FDR
+## Compute BH FDR
+We can use the `p.adjust()` function to compute a q-value, which essentially treats each p-value as a discovery threshold for FDR [@storey2003statistical]. Typically, a priori values such as 0.05 or 0.1 are then used to determine which q-values correspond to false null hypotheses, here, genes that should be considered *discoveries*. We see that no genes meet `q < 0.05` but two genes meet the `q < 0.1` level.
 
-```{r, resuts='hide', message='hide', warning=FALSE}
+```{r, message='hide', warning=FALSE}
 rslts.obs[,"q_value"] = p.adjust(rslts.obs[,"p_value"], method="BH")
-knitr::kable(rslts.obs[rslts.obs$q_value < 0.1,], caption = "Parametic approach: BH FDR < 0.1",
-             digits=4, row.names=FALSE)
+knitr::kable(rslts.obs[rslts.obs$q_value < 0.1,], caption = "Parametic approach: BH FDR < 0.1", digits=4, row.names=FALSE)
 ```
 
-# Repeatly conduct analysis following permutation 
+This result raises a troubling issue for this more conventional approach. The investigator will not know a priori which threshold, 0.1 or 0.05, is more appropriate, yet to be formally correct they need to choose before the analysis is conducted. If they are lucky enough to choose 0.1, the results yield two significant genes, however, if they happen to choose 0.05, then they must conclude that there are no discoveries. This highlights an important motivation for the proposed approach, which allows the investigator to choose the discovery threshold post hoc.
 
-```{r, resuts='hide', message='hide', warning=FALSE}
+## Repeatly conduct analysis following permutation 
+Another motivation for the proposed approach is it's non-parametric construction, which allows the investigator to relax distributional assumptions. Rather than evaluate the observed results against a parametric distribution, we approximate the distribution under the null hypothesis using the data itself.
+
+Here the null hypothesis is that the age-stage interaction term is independent of gene expression conditional on the covariates site, age, and stage. Below, we generate p-values consistent with this null by randomly permuting the `ageStage` interation term. Thus, 100 sets of results distributed approximately under the null are generated.
+
+```{r, message='hide', warning=FALSE}
 n.perm = 100
 perml = vector('list', n.perm)
 tmpvar = factor(paste(as.character(pemat[,"age"]), as.character(pemat[,"stage"]), sep="_"),
@@ -132,32 +137,42 @@ for(perm in 1:n.perm){
 }
 ```
 
-# Compute FDR using the fdrci package
+## Compute FDR using the fdrci package
+To use the fdrci package to compute FDR, the investigator must provide candidate discovery thresholds. In this case the test statistic is the p-value itself, and we choose values that correspond to the series, $-log_{10}(p) = 2,2.1,2.2,...,5$. Each row of the output table includes the permutation-based FDR estimate, 95% CIs, $\pi_0$, over-dispersion estimate, number of discoveries in the observed data, and total number of discoveries in the permuted data (summed over all permutation results). 
 
+### First we will estimate FDR and 95% CIs without accounting for multiplicity
+We see that for all of our candidate discovery thresholds the upper FDR CI bound is less than one, indicating evidence of true alternative hypotheses within all of these sets. However, note that there is only one test corresponding to $FDR < 0.1$. If all parametric assumptions are satisfied this approach should be less conservative than BH FDR. The fact that it is more conservative here may indicated mild departures from parametric assumptions.
 
-First we will estimate FDR and 95% CIs without accounting for multiplicity
+We are still faced with the issue of selecting one or more FDR CIs without accounting for the selection process. Thus, we recompute using the "BH" option.  
 
-```{r, resuts='hide', message='hide', warning=FALSE}
+```{r, message='hide', warning=FALSE}
 mytbl = fdrTbl(rslts.obs$p_value,perml,"p_value",nrow(rslts.obs),2,5)
 mytbl = mytbl[!is.na(mytbl$fdr), ]
 knitr::kable(mytbl, caption = "FDR: no multiplicity adjustment",
              digits=3, row.names=FALSE)
 ```
 
-Next we use the BH option to use the FDR selection and adjustment approach described in our paper [@JM-BY-FDR].
+### Next we use the BH option for the FDR selection and adjustment approach described in our paper [@JM-BY-FDR].
+We are not restricted to the 0.1 threshold, so for example, we may decide that FDR around 0.2 is low enough to be worth following up, in which case, we could use the threshold of $-log_{10}(p) = 2.6$, yielding $FDR = 0.195 (0.089, 0.427)$ and 7 discoveries.
 
-```{r, resuts='hide', message='hide', warning=FALSE}
+```{r, message='hide', warning=FALSE}
 mytbl1 = fdrTbl(rslts.obs$p_value,perml,"p_value",nrow(rslts.obs),2,5,correct="BH")
 mytbl1 = mytbl1[!is.na(mytbl1$fdr), ]
 knitr::kable(mytbl1, caption = "FDR: with multiplicity adjustment",
              digits=3, row.names=FALSE)
 ```
 
-## Why is there no difference between the adjusted and unadjusted results?
+```{r, message='hide', warning=FALSE}
+knitr::kable(rslts.obs[rslts.obs$p_value < 10^(-2.6),], caption = "Parametic approach: BH FDR < 0.2", digits=4, row.names=FALSE)
+```
 
-# Final thoughts
+### Why is there no difference between the adjusted and unadjusted results?
+The proposed selection and adjustment approach relies on the BH method in selection of discovery threshold FDR confidence intervals. Recall that one of the properties of the BH approach is that if all p-values are less than the target type I error, \alpha, then the adjusted significance level is the same as the unadjusted level. We are observing this dynamic here. That is, all candidate thresholds have sufficient evidence of $FDR < 1$ to justify selection, thus there is no adjustment in this case. 
 
-```{r, resuts='hide', message='hide', warning=FALSE}
+## Final thoughts
+If we look at violin plots of expression of the most significant gene, Caveolin-1 (*CAV1*), against age and stage groups, we see clear differences by stage, with expression in stage = 1 tumors lower than expression in stage = 2 tumors. However, there is also a suggestion of trends with age that appears to reverse across stage groups. For stage = 1 tumors, expression tends to decrease with age, whereas for stage = 2 tumors, expression tends to increase with age.
+
+```{r fig.height=5, fig.width=7.5, message=FALSE, warning=FALSE}
 p1 = ggplot( pemat, aes( x=stage, y=CAV1, fill=age) ) + 
   xlab("stage.age") + ylab("CAV1 expression") + theme_bw() +
   geom_violin(position=position_dodge(width = 0.8)) + 
@@ -168,4 +183,6 @@ p1 = ggplot( pemat, aes( x=stage, y=CAV1, fill=age) ) +
 p1
 ```
 
-
+```{r}
+sessionInfo()
+```
