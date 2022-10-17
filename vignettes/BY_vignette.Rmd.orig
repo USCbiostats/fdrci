@@ -10,7 +10,13 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE, comment = "#>", out.width = "100%",
+  fig.width = 7.5, fig.height = 5, dev = "png", dpi = 150, fig.path = "fdr-",
+  message = FALSE, warning = FALSE, error = FALSE
+)
+```
 
 ## Introduction
 In the context of high grade serous ovarian cancer (HGSOC), we might be interested in more fully understanding the relationship between age, cancer stage and gene expression in tumor tissue. These questions could be addressed in data hosted by Gene Expression Omnibus (GEO) and collected as part of our study [@millstein2020prognostic] involving 513 gene expression features measured in formalin-fixed paraffin-embedded (FFPE) tumor tissue from 3,769 women with HGSOC. 
@@ -29,8 +35,7 @@ Organization
 
 ## First we load the libraries
 
-
-```r
+```{r setup}
 # download and install fdrci from github or CRAN
 # https://uscbiostats.github.io/fdrci
 # library(devtools)
@@ -51,14 +56,8 @@ set.seed(052422)
 ## Download data from GEO
 The GEO id for the dataset is GSE132342. We can use it along with the R package GEOquery to get the Nanostring panel of gene expression features as well as some limited patient information including age group (based on quartiles of the training dataset with groups aged <53, 53-59, 60-66, and >=67), stage (dichotomized into early (FIGO stage I/II) and advanced (FIGO stage III/IV)). 
 
-
-```r
+```{r download, message='hide', warning=FALSE}
 gset <- getGEO("GSE132342", GSEMatrix =TRUE, getGPL=TRUE)
-#> Found 1 file(s)
-#> GSE132342_series_matrix.txt.gz
-#> Using locally cached version: /var/folders/tv/8k6w717j4b95pjt540k344qw0000gn/T//Rtmpwlolko/GSE132342_series_matrix.txt.gz
-#> Using locally cached version of GPL26748 found here:
-#> /var/folders/tv/8k6w717j4b95pjt540k344qw0000gn/T//Rtmpwlolko/GPL26748.soft.gz
 gset = gset$GSE132342_series_matrix.txt.gz
 
 pdat = phenoData(gset)
@@ -90,8 +89,7 @@ pemat <- cbind(pdat.p, t(edat)) %>%
 ## Age*stage effect modification analysis
 Here we fit a linear model for each of the 513 gene expression features. The outcome is expression and the covariates are site (an indicator of the component study where a portion of the data were collected), age group, stage group, and an interaction between age and stage as defined by a factor variable we create by combining levels of age and stage. The statistic of interest is a p-value from an F-test of the interaction term. The output is a dataframe, `rslts`, that includes the gene name in the first column and the p-value in the second column. 
 
-
-```r
+```{r iscan, message='hide', warning=FALSE}
 # create interaction term manually
 pemat[, "ageStage"] = factor(paste(as.character(pemat[,"age"]), as.character(pemat[,"stage"]), sep="_"), levels=c("q4_2", "q1_1", "q1_2", "q2_1", "q2_2", "q3_1", "q3_2", "q4_1"))
 # Run interaction scan
@@ -109,20 +107,10 @@ rslts.obs = rslts
 ## Compute BH FDR
 We can use the `p.adjust()` function to compute a q-value, which essentially treats each p-value as a discovery threshold for FDR [@storey2003statistical]. Typically, a priori values such as 0.05 or 0.1 are then used to determine which q-values correspond to false null hypotheses, here, genes that should be considered *discoveries*. We see that no genes meet `q < 0.05` but two genes meet the `q < 0.1` level.
 
-
-```r
+```{r tabq, message='hide', warning=FALSE}
 rslts.obs[,"q_value"] = p.adjust(rslts.obs[,"p_value"], method="BH")
 knitr::kable(rslts.obs[rslts.obs$q_value < 0.1,], caption = "Parametic approach: BH FDR < 0.1", digits=4, row.names=FALSE)
 ```
-
-
-
-Table: Parametic approach: BH FDR < 0.1
-
-|gene   | p_value| q_value|
-|:------|-------:|-------:|
-|IGFBP4 |   3e-04|  0.0884|
-|CAV1   |   1e-04|  0.0705|
 
 This result raises a troubling issue for this more conventional approach. The investigator will not know a priori which threshold, 0.1 or 0.05, is more appropriate, yet to be formally correct they need to choose before the analysis is conducted. If they are lucky enough to choose 0.1, the results yield two significant genes, however, if they happen to choose 0.05, then they must conclude that there are no discoveries. This highlights an important motivation for the proposed approach, which allows the investigator to choose the discovery threshold post hoc.
 
@@ -131,8 +119,7 @@ Another motivation for the proposed approach is it's non-parametric construction
 
 Here the null hypothesis is that the age-stage interaction term is independent of gene expression conditional on the covariates site, age, and stage. Below, we generate p-values consistent with this null by randomly permuting the `ageStage` interation term. Thus, 100 sets of results distributed approximately under the null are generated.
 
-
-```r
+```{r fitp, message='hide', warning=FALSE}
 n.perm = 100
 perml = vector('list', n.perm)
 tmpvar = factor(paste(as.character(pemat[,"age"]), as.character(pemat[,"stage"]), sep="_"),
@@ -159,95 +146,26 @@ We see that for all of our candidate discovery thresholds the upper FDR CI bound
 
 We are still faced with the issue of selecting one or more FDR CIs without accounting for the selection process. Thus, we recompute using the "BH" option.  
 
-
-```r
+```{r tabfdr, message='hide', warning=FALSE}
 mytbl = fdrTbl(rslts.obs$p_value,perml,"p_value",nrow(rslts.obs),2,5)
 mytbl = mytbl[!is.na(mytbl$fdr), ]
 knitr::kable(mytbl, caption = "FDR: no multiplicity adjustment",
              digits=3, row.names=FALSE)
 ```
 
-
-
-Table: FDR: no multiplicity adjustment
-
-| threshold|   fdr|    ll|    ul|   pi0|   odp|  S|  Sp|
-|---------:|-----:|-----:|-----:|-----:|-----:|--:|---:|
-|       2.0| 0.474| 0.253| 0.886| 0.989| 1.076| 11| 527|
-|       2.1| 0.461| 0.227| 0.937| 0.991| 1.131|  9| 419|
-|       2.2| 0.377| 0.193| 0.735| 0.989| 1.000|  9| 343|
-|       2.3| 0.349| 0.172| 0.708| 0.990| 1.000|  8| 282|
-|       2.4| 0.324| 0.152| 0.691| 0.991| 1.000|  7| 229|
-|       2.5| 0.252| 0.117| 0.540| 0.990| 1.009|  7| 178|
-|       2.6| 0.195| 0.089| 0.427| 0.989| 1.054|  7| 138|
-|       2.7| 0.187| 0.082| 0.426| 0.990| 1.000|  6| 113|
-|       2.8| 0.214| 0.078| 0.585| 0.994| 1.000|  4|  86|
-|       2.9| 0.184| 0.067| 0.505| 0.994| 1.000|  4|  74|
-|       3.0| 0.209| 0.065| 0.668| 0.995| 1.000|  3|  63|
-|       3.1| 0.249| 0.060| 1.000| 0.997| 1.000|  2|  50|
-|       3.2| 0.189| 0.046| 0.787| 0.997| 1.000|  2|  38|
-|       3.3| 0.140| 0.033| 0.594| 0.997| 1.016|  2|  28|
-|       3.4| 0.120| 0.026| 0.546| 0.997| 1.105|  2|  24|
-|       3.5| 0.200| 0.024| 1.000| 0.998| 1.112|  1|  20|
-|       3.6| 0.130| 0.017| 0.994| 0.998| 1.000|  1|  13|
-|       3.7| 0.110| 0.014| 0.852| 0.998| 1.000|  1|  11|
-|       3.8| 0.080| 0.010| 0.640| 0.998| 1.000|  1|   8|
-
 ### Next we use the BH option for the FDR selection and adjustment approach described in our paper [@JM-BY-FDR].
 We are not restricted to the 0.1 threshold, so for example, we may decide that FDR around 0.2 is low enough to be worth following up, in which case, we could use the threshold of $-log_{10}(p) = 2.6$, yielding $FDR = 0.195 (0.089, 0.427)$ and 7 discoveries.
 
-
-```r
+```{r tabfdr2, message='hide', warning=FALSE}
 mytbl1 = fdrTbl(rslts.obs$p_value,perml,"p_value",nrow(rslts.obs),2,5,correct="BH")
 mytbl1 = mytbl1[!is.na(mytbl1$fdr), ]
 knitr::kable(mytbl1, caption = "FDR: with multiplicity adjustment",
              digits=3, row.names=FALSE)
 ```
 
-
-
-Table: FDR: with multiplicity adjustment
-
-| threshold|   fdr|    ll|    ul|   pi0|   odp|  S|  Sp|
-|---------:|-----:|-----:|-----:|-----:|-----:|--:|---:|
-|       2.0| 0.474| 0.251| 0.892| 0.989| 1.076| 11| 527|
-|       2.1| 0.461| 0.225| 0.944| 0.991| 1.131|  9| 419|
-|       2.2| 0.377| 0.192| 0.741| 0.989| 1.000|  9| 343|
-|       2.3| 0.349| 0.170| 0.714| 0.990| 1.000|  8| 282|
-|       2.4| 0.324| 0.151| 0.697| 0.991| 1.000|  7| 229|
-|       2.5| 0.252| 0.116| 0.545| 0.990| 1.009|  7| 178|
-|       2.6| 0.195| 0.088| 0.431| 0.989| 1.054|  7| 138|
-|       2.7| 0.187| 0.081| 0.430| 0.990| 1.000|  6| 113|
-|       2.8| 0.214| 0.077| 0.591| 0.994| 1.000|  4|  86|
-|       2.9| 0.184| 0.066| 0.511| 0.994| 1.000|  4|  74|
-|       3.0| 0.209| 0.065| 0.677| 0.995| 1.000|  3|  63|
-|       3.1| 0.249| 0.059| 1.000| 0.997| 1.000|  2|  50|
-|       3.2| 0.189| 0.045| 0.800| 0.997| 1.000|  2|  38|
-|       3.3| 0.140| 0.032| 0.604| 0.997| 1.016|  2|  28|
-|       3.4| 0.120| 0.026| 0.556| 0.997| 1.105|  2|  24|
-|       3.5| 0.200|    NA|    NA| 0.998| 1.112|  1|  20|
-|       3.6| 0.130| 0.017| 1.000| 0.998| 1.000|  1|  13|
-|       3.7| 0.110| 0.014| 0.873| 0.998| 1.000|  1|  11|
-|       3.8| 0.080| 0.010| 0.655| 0.998| 1.000|  1|   8|
-
-
-```r
+```{r tabp, message='hide', warning=FALSE}
 knitr::kable(rslts.obs[rslts.obs$p_value < 10^(-2.6),], caption = "Parametic approach: BH FDR < 0.2", digits=4, row.names=FALSE)
 ```
-
-
-
-Table: Parametic approach: BH FDR < 0.2
-
-|gene   | p_value| q_value|
-|:------|-------:|-------:|
-|HNF1B  |  0.0021|  0.1552|
-|SORBS3 |  0.0017|  0.1418|
-|ANXA4  |  0.0017|  0.1418|
-|IGFBP4 |  0.0003|  0.0884|
-|CAV1   |  0.0001|  0.0705|
-|QPRT   |  0.0010|  0.1418|
-|NUP85  |  0.0012|  0.1418|
 
 ### Why is there no difference between the adjusted and unadjusted results?
 The proposed selection and adjustment approach relies on the BH method in selection of discovery threshold FDR confidence intervals. Recall that one of the properties of the BH approach is that if all p-values are less than the target type I error, \alpha, then the adjusted significance level is the same as the unadjusted level. We are observing this dynamic here. That is, all candidate thresholds have sufficient evidence of $FDR < 1$ to justify selection, thus there is no adjustment in this case. 
@@ -255,8 +173,7 @@ The proposed selection and adjustment approach relies on the BH method in select
 ## Final thoughts
 If we look at violin plots of expression of the most significant gene, Caveolin-1 (*CAV1*), against age and stage groups, we see clear differences by stage, with expression in stage = 1 tumors lower than expression in stage = 2 tumors. However, there is also a suggestion of trends with age that appears to reverse across stage groups. For stage = 1 tumors, expression tends to decrease with age, whereas for stage = 2 tumors, expression tends to increase with age.
 
-
-```r
+```{r fig1, fig.height=5, fig.width=7.5, message=FALSE, warning=FALSE}
 p1 = ggplot( pemat, aes( x=stage, y=CAV1, fill=age) ) + 
   xlab("stage.age") + ylab("CAV1 expression") + theme_bw() +
   geom_violin(position=position_dodge(width = 0.8)) + 
@@ -267,36 +184,6 @@ p1 = ggplot( pemat, aes( x=stage, y=CAV1, fill=age) ) +
 p1
 ```
 
-<img src="fdr-fig1-1.png" title="plot of chunk fig1" alt="plot of chunk fig1" width="100%" />
-
-
-```r
+```{r}
 sessionInfo()
-#> R version 4.1.1 (2021-08-10)
-#> Platform: x86_64-apple-darwin17.0 (64-bit)
-#> Running under: macOS Monterey 12.5
-#> 
-#> Matrix products: default
-#> LAPACK: /Library/Frameworks/R.framework/Versions/4.1/Resources/lib/libRlapack.dylib
-#> 
-#> locale:
-#> [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
-#> 
-#> attached base packages:
-#> [1] stats     graphics  grDevices utils     datasets  methods   base     
-#> 
-#> other attached packages:
-#> [1] ggplot2_3.3.6       foreach_1.5.2       dplyr_1.0.9         GEOquery_2.62.2     Biobase_2.54.0     
-#> [6] BiocGenerics_0.40.0 fdrci_2.3          
-#> 
-#> loaded via a namespace (and not attached):
-#>  [1] tidyselect_1.1.1  xfun_0.31         purrr_0.3.4       colorspace_2.0-3  vctrs_0.4.1       generics_0.1.0   
-#>  [7] htmltools_0.5.2   yaml_2.2.1        utf8_1.2.2        rlang_1.0.2       R.oo_1.24.0       pillar_1.7.0     
-#> [13] glue_1.6.2        withr_2.4.2       DBI_1.1.2         R.utils_2.11.0    lifecycle_1.0.1   stringr_1.4.0    
-#> [19] munsell_0.5.0     gtable_0.3.0      R.methodsS3_1.8.1 codetools_0.2-18  evaluate_0.15     labeling_0.4.2   
-#> [25] knitr_1.39        tzdb_0.3.0        fastmap_1.1.0     curl_4.3.2        fansi_0.5.0       highr_0.9        
-#> [31] readr_2.1.2       scales_1.2.0      limma_3.50.3      farver_2.1.0      hms_1.1.1         digest_0.6.28    
-#> [37] stringi_1.7.5     grid_4.1.1        cli_3.3.0         tools_4.1.1       magrittr_2.0.3    tibble_3.1.7     
-#> [43] crayon_1.4.1      tidyr_1.2.0       pkgconfig_2.0.3   ellipsis_0.3.2    data.table_1.14.2 xml2_1.3.2       
-#> [49] assertthat_0.2.1  rmarkdown_2.14    iterators_1.0.14  R6_2.5.1          compiler_4.1.1
 ```
