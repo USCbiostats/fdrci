@@ -9,7 +9,7 @@
 #' analog of the same approach.
 #' 
 #' \tabular{ll}{ Package: \tab fdrci\cr Type: \tab Package\cr Version: \tab
-#' 2.3\cr Date: \tab 2021-12-22\cr License: \tab Artistic-2.0\cr LazyLoad: \tab
+#' 2.4\cr Date: \tab 2022-10-17\cr License: \tab Artistic-2.0\cr LazyLoad: \tab
 #' yes\cr } This method is designed to compute FDR when a permutation-based
 #' approach has been utilized. The objective here is to identify a subset of
 #' positive tests that have corresponding statistics with a more exteme
@@ -29,12 +29,17 @@
 #' @name fdrci-package
 #' @aliases fdrci-package fdrci
 #' @docType package
-#' @author Joshua Millstein, Eric S. Kawaguchi
+#' @author Joshua Millstein
 #' 
 #' Maintainer: Joshua Millstein <joshua.millstein@@usc.edu> Joshua Millstein
 #' @references Millstein J, Volfson D. 2013. Computationally efficient
 #' permutation-based confidence interval estimation for tail-area FDR.
 #' Frontiers in Genetics | Statistical Genetics and Methodology 4(179):1-11.
+#' 
+#' Millstein, J., Battaglin, F., Arai, H., Zhang, W., Jayachandran, P., 
+#' Soni, S., Parikh, A.R., Mancao, C. and Lenz, H.J., 2022. fdrci: FDR 
+#' confidence interval selection and adjustment for large-scale hypothesis 
+#' testing. Bioinformatics advances, 2(1), p.vbac047.
 #' @keywords htest nonparametric
 NULL
 
